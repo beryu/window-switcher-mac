@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+  @Binding var window: NSWindow?
+
   var body: some View {
     VStack {
       Image(systemName: "globe")
@@ -19,22 +21,22 @@ struct ContentView: View {
     .onAppear {
       let type = CGWindowListOption.optionOnScreenOnly
       let windowList = CGWindowListCopyWindowInfo(type, kCGNullWindowID) as NSArray? as? [[String: AnyObject]]
-      
+
       for entry  in windowList ?? [] {
         let owner = entry[kCGWindowOwnerName as String] as! String
         var bounds = entry[kCGWindowBounds as String] as? [String: Int]
         let pid = entry[kCGWindowOwnerPID as String] as? Int32
-        
+
         print("detected: \(owner)")
         if owner == "Microsoft Edge" {
           let appRef = AXUIElementCreateApplication(pid!);  //TopLevel Accessability Object of PID
-          
+
           var value: AnyObject?
           let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &value)
           if result != .success {
             fatalError("AXUIElementCopyAttributeValue is failed with \(result.rawValue)...")
           }
-          
+
           if let windowList = value as? [AXUIElement], let window = windowList.first {
             var pid: pid_t = 0
             var result = AXUIElementGetPid(window, &pid)
@@ -71,6 +73,6 @@ struct ContentView: View {
   }
 }
 
-#Preview {
-  ContentView()
-}
+//#Preview {
+//  ContentView()
+//}

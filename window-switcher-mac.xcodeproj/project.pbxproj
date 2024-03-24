@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C942F2BB0899300E06AE5 /* TransparentWindow.swift */; };
 		B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */; };
 		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
 		B180F7232BB007D00017A08D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B180F7222BB007D00017A08D /* Assets.xcassets */; };
@@ -34,6 +35,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		887C942F2BB0899300E06AE5 /* TransparentWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindow.swift; sourceTree = "<group>"; };
 		B180F71B2BB007CF0017A08D /* window-switcher-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "window-switcher-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitcherApp.swift; sourceTree = "<group>"; };
 		B180F7202BB007CF0017A08D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -100,6 +102,7 @@
 				B180F7222BB007D00017A08D /* Assets.xcassets */,
 				B180F7272BB007D00017A08D /* window_switcher_mac.entitlements */,
 				B180F7242BB007D00017A08D /* Preview Content */,
+				887C942F2BB0899300E06AE5 /* TransparentWindow.swift */,
 			);
 			path = "window-switcher-mac";
 			sourceTree = "<group>";
@@ -259,6 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */,
 				B180F7212BB007CF0017A08D /* ContentView.swift in Sources */,
 				B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */,
 			);

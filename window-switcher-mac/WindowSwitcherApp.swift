@@ -7,11 +7,19 @@
 
 import SwiftUI
 
+let WIDTH: CGFloat = 400
+let HEIGHT: CGFloat = 200
+
 @main
 struct WindowSwitcherApp: App {
+  @State var window: NSWindow?
+
   var body: some Scene {
     WindowGroup {
-      ContentView()
+      ContentView(window: $window)
+        .background(TransparentWindow())
+        .frame(width: NSScreen.main?.frame.width, height: NSScreen.main?.frame.height)
     }
+    .windowStyle(HiddenTitleBarWindowStyle())
   }
 }
