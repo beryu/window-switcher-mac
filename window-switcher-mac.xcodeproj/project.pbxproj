@@ -1,0 +1,588 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B180F71F2BB007CF0017A08D /* window_switcher_macApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* window_switcher_macApp.swift */; };
+		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
+		B180F7232BB007D00017A08D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B180F7222BB007D00017A08D /* Assets.xcassets */; };
+		B180F7262BB007D00017A08D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B180F7252BB007D00017A08D /* Preview Assets.xcassets */; };
+		B180F7312BB007D10017A08D /* window_switcher_macTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7302BB007D10017A08D /* window_switcher_macTests.swift */; };
+		B180F73B2BB007D10017A08D /* window_switcher_macUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F73A2BB007D10017A08D /* window_switcher_macUITests.swift */; };
+		B180F73D2BB007D10017A08D /* window_switcher_macUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F73C2BB007D10017A08D /* window_switcher_macUITestsLaunchTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B180F72D2BB007D10017A08D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B180F7132BB007CF0017A08D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B180F71A2BB007CF0017A08D;
+			remoteInfo = "window-switcher-mac";
+		};
+		B180F7372BB007D10017A08D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B180F7132BB007CF0017A08D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B180F71A2BB007CF0017A08D;
+			remoteInfo = "window-switcher-mac";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B180F71B2BB007CF0017A08D /* window-switcher-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "window-switcher-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B180F71E2BB007CF0017A08D /* window_switcher_macApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = window_switcher_macApp.swift; sourceTree = "<group>"; };
+		B180F7202BB007CF0017A08D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B180F7222BB007D00017A08D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B180F7252BB007D00017A08D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		B180F7272BB007D00017A08D /* window_switcher_mac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = window_switcher_mac.entitlements; sourceTree = "<group>"; };
+		B180F72C2BB007D10017A08D /* window-switcher-macTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "window-switcher-macTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B180F7302BB007D10017A08D /* window_switcher_macTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = window_switcher_macTests.swift; sourceTree = "<group>"; };
+		B180F7362BB007D10017A08D /* window-switcher-macUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "window-switcher-macUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B180F73A2BB007D10017A08D /* window_switcher_macUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = window_switcher_macUITests.swift; sourceTree = "<group>"; };
+		B180F73C2BB007D10017A08D /* window_switcher_macUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = window_switcher_macUITestsLaunchTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B180F7182BB007CF0017A08D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F7292BB007D10017A08D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F7332BB007D10017A08D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B180F7122BB007CF0017A08D = {
+			isa = PBXGroup;
+			children = (
+				B180F71D2BB007CF0017A08D /* window-switcher-mac */,
+				B180F72F2BB007D10017A08D /* window-switcher-macTests */,
+				B180F7392BB007D10017A08D /* window-switcher-macUITests */,
+				B180F71C2BB007CF0017A08D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B180F71C2BB007CF0017A08D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B180F71B2BB007CF0017A08D /* window-switcher-mac.app */,
+				B180F72C2BB007D10017A08D /* window-switcher-macTests.xctest */,
+				B180F7362BB007D10017A08D /* window-switcher-macUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B180F71D2BB007CF0017A08D /* window-switcher-mac */ = {
+			isa = PBXGroup;
+			children = (
+				B180F71E2BB007CF0017A08D /* window_switcher_macApp.swift */,
+				B180F7202BB007CF0017A08D /* ContentView.swift */,
+				B180F7222BB007D00017A08D /* Assets.xcassets */,
+				B180F7272BB007D00017A08D /* window_switcher_mac.entitlements */,
+				B180F7242BB007D00017A08D /* Preview Content */,
+			);
+			path = "window-switcher-mac";
+			sourceTree = "<group>";
+		};
+		B180F7242BB007D00017A08D /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				B180F7252BB007D00017A08D /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		B180F72F2BB007D10017A08D /* window-switcher-macTests */ = {
+			isa = PBXGroup;
+			children = (
+				B180F7302BB007D10017A08D /* window_switcher_macTests.swift */,
+			);
+			path = "window-switcher-macTests";
+			sourceTree = "<group>";
+		};
+		B180F7392BB007D10017A08D /* window-switcher-macUITests */ = {
+			isa = PBXGroup;
+			children = (
+				B180F73A2BB007D10017A08D /* window_switcher_macUITests.swift */,
+				B180F73C2BB007D10017A08D /* window_switcher_macUITestsLaunchTests.swift */,
+			);
+			path = "window-switcher-macUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B180F71A2BB007CF0017A08D /* window-switcher-mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B180F7402BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-mac" */;
+			buildPhases = (
+				B180F7172BB007CF0017A08D /* Sources */,
+				B180F7182BB007CF0017A08D /* Frameworks */,
+				B180F7192BB007CF0017A08D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "window-switcher-mac";
+			productName = "window-switcher-mac";
+			productReference = B180F71B2BB007CF0017A08D /* window-switcher-mac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B180F72B2BB007D10017A08D /* window-switcher-macTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B180F7432BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-macTests" */;
+			buildPhases = (
+				B180F7282BB007D10017A08D /* Sources */,
+				B180F7292BB007D10017A08D /* Frameworks */,
+				B180F72A2BB007D10017A08D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B180F72E2BB007D10017A08D /* PBXTargetDependency */,
+			);
+			name = "window-switcher-macTests";
+			productName = "window-switcher-macTests";
+			productReference = B180F72C2BB007D10017A08D /* window-switcher-macTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B180F7352BB007D10017A08D /* window-switcher-macUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B180F7462BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-macUITests" */;
+			buildPhases = (
+				B180F7322BB007D10017A08D /* Sources */,
+				B180F7332BB007D10017A08D /* Frameworks */,
+				B180F7342BB007D10017A08D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B180F7382BB007D10017A08D /* PBXTargetDependency */,
+			);
+			name = "window-switcher-macUITests";
+			productName = "window-switcher-macUITests";
+			productReference = B180F7362BB007D10017A08D /* window-switcher-macUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B180F7132BB007CF0017A08D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1530;
+				LastUpgradeCheck = 1530;
+				TargetAttributes = {
+					B180F71A2BB007CF0017A08D = {
+						CreatedOnToolsVersion = 15.3;
+					};
+					B180F72B2BB007D10017A08D = {
+						CreatedOnToolsVersion = 15.3;
+						TestTargetID = B180F71A2BB007CF0017A08D;
+					};
+					B180F7352BB007D10017A08D = {
+						CreatedOnToolsVersion = 15.3;
+						TestTargetID = B180F71A2BB007CF0017A08D;
+					};
+				};
+			};
+			buildConfigurationList = B180F7162BB007CF0017A08D /* Build configuration list for PBXProject "window-switcher-mac" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B180F7122BB007CF0017A08D;
+			productRefGroup = B180F71C2BB007CF0017A08D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B180F71A2BB007CF0017A08D /* window-switcher-mac */,
+				B180F72B2BB007D10017A08D /* window-switcher-macTests */,
+				B180F7352BB007D10017A08D /* window-switcher-macUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B180F7192BB007CF0017A08D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B180F7262BB007D00017A08D /* Preview Assets.xcassets in Resources */,
+				B180F7232BB007D00017A08D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F72A2BB007D10017A08D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F7342BB007D10017A08D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B180F7172BB007CF0017A08D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B180F7212BB007CF0017A08D /* ContentView.swift in Sources */,
+				B180F71F2BB007CF0017A08D /* window_switcher_macApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F7282BB007D10017A08D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B180F7312BB007D10017A08D /* window_switcher_macTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B180F7322BB007D10017A08D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B180F73B2BB007D10017A08D /* window_switcher_macUITests.swift in Sources */,
+				B180F73D2BB007D10017A08D /* window_switcher_macUITestsLaunchTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B180F72E2BB007D10017A08D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B180F71A2BB007CF0017A08D /* window-switcher-mac */;
+			targetProxy = B180F72D2BB007D10017A08D /* PBXContainerItemProxy */;
+		};
+		B180F7382BB007D10017A08D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B180F71A2BB007CF0017A08D /* window-switcher-mac */;
+			targetProxy = B180F7372BB007D10017A08D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B180F73E2BB007D10017A08D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B180F73F2BB007D10017A08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		B180F7412BB007D10017A08D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "window-switcher-mac/window_switcher_mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"window-switcher-mac/Preview Content\"";
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B180F7422BB007D10017A08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "window-switcher-mac/window_switcher_mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"window-switcher-mac/Preview Content\"";
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B180F7442BB007D10017A08D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-macTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/window-switcher-mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/window-switcher-mac";
+			};
+			name = Debug;
+		};
+		B180F7452BB007D10017A08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-macTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/window-switcher-mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/window-switcher-mac";
+			};
+			name = Release;
+		};
+		B180F7472BB007D10017A08D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-macUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "window-switcher-mac";
+			};
+			name = Debug;
+		};
+		B180F7482BB007D10017A08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8A7X4PEZU7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "jp.blk.windowswitcher.window-switcher-macUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "window-switcher-mac";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B180F7162BB007CF0017A08D /* Build configuration list for PBXProject "window-switcher-mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B180F73E2BB007D10017A08D /* Debug */,
+				B180F73F2BB007D10017A08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B180F7402BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B180F7412BB007D10017A08D /* Debug */,
+				B180F7422BB007D10017A08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B180F7432BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-macTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B180F7442BB007D10017A08D /* Debug */,
+				B180F7452BB007D10017A08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B180F7462BB007D10017A08D /* Build configuration list for PBXNativeTarget "window-switcher-macUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B180F7472BB007D10017A08D /* Debug */,
+				B180F7482BB007D10017A08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B180F7132BB007CF0017A08D /* Project object */;
+}
