@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Carbon
 
 struct ContentView: View {
   struct AppWindow {
@@ -20,8 +19,10 @@ struct ContentView: View {
   }
 
   @Binding var window: NSWindow?
-  @State var appWindows: [AppWindow] = []
-  @State var shouldShow: Bool = false
+  @State private var appWindows: [AppWindow] = []
+  @State private var shouldShow: Bool = false
+  @FocusState private var focused: Bool
+  // global hot key
   private let keys: [String] = [
     "a",
     "b",
@@ -50,7 +51,6 @@ struct ContentView: View {
     "y",
     "z",
   ]
-  @FocusState private var focused: Bool
 
   var body: some View {
     ZStack {
@@ -84,6 +84,14 @@ struct ContentView: View {
       shouldShow = false
 
       return .handled
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
+      focused = true
+      shouldShow = true
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
+      focused = false
+      shouldShow = false
     }
     .onAppear {
       let type = CGWindowListOption.optionOnScreenOnly
@@ -137,8 +145,6 @@ struct ContentView: View {
 
         focused = true
         shouldShow = true
-
-        // global hot key
       }
     }
   }
