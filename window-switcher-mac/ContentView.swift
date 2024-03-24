@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Carbon
 
 struct ContentView: View {
   struct AppWindow {
@@ -136,9 +137,10 @@ struct ContentView: View {
 
         focused = true
         shouldShow = true
+
+        // global hot key
       }
     }
-
   }
 
   private func focusApp(appWindow: AppWindow) {

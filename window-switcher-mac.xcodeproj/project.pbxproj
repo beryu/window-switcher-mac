@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C942F2BB0899300E06AE5 /* TransparentWindow.swift */; };
 		887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */; };
+		88C541AD2BB0B1170049EC15 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 88C541AC2BB0B1170049EC15 /* HotKey */; };
 		B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */; };
 		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
 		B180F7232BB007D00017A08D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B180F7222BB007D00017A08D /* Assets.xcassets */; };
@@ -56,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				88C541AD2BB0B1170049EC15 /* HotKey in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +161,9 @@
 			dependencies = (
 			);
 			name = "window-switcher-mac";
+			packageProductDependencies = (
+				88C541AC2BB0B1170049EC15 /* HotKey */,
+			);
 			productName = "window-switcher-mac";
 			productReference = B180F71B2BB007CF0017A08D /* window-switcher-mac.app */;
 			productType = "com.apple.product-type.application";
@@ -231,6 +236,9 @@
 				Base,
 			);
 			mainGroup = B180F7122BB007CF0017A08D;
+			packageReferences = (
+				88C541AB2BB0B1170049EC15 /* XCRemoteSwiftPackageReference "HotKey" */,
+			);
 			productRefGroup = B180F71C2BB007CF0017A08D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -599,6 +607,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		88C541AB2BB0B1170049EC15 /* XCRemoteSwiftPackageReference "HotKey" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/soffes/HotKey";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		88C541AC2BB0B1170049EC15 /* HotKey */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 88C541AB2BB0B1170049EC15 /* XCRemoteSwiftPackageReference "HotKey" */;
+			productName = HotKey;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B180F7132BB007CF0017A08D /* Project object */;
 }
