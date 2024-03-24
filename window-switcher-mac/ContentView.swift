@@ -11,6 +11,7 @@ struct ContentView: View {
   struct AppWindow {
     var uuid: UUID
     var pid: Int32
+    var element: AXUIElement
     var x: CGFloat
     var y: CGFloat
     var name: String
@@ -19,6 +20,7 @@ struct ContentView: View {
 
   @Binding var window: NSWindow?
   @State var appWindows: [AppWindow] = []
+  @State var shouldShow: Bool = false
   private let keys: [String] = [
     "a",
     "b",
@@ -47,25 +49,40 @@ struct ContentView: View {
     "y",
     "z",
   ]
+  @FocusState private var focused: Bool
 
   var body: some View {
     ZStack {
-      ForEach(appWindows, id: \.uuid) { appWindow in
-        VStack {
-          Text(appWindow.key)
-            .font(.system(size: 36, weight: .bold))
-            .foregroundStyle(.primary)
-          Text(appWindow.name)
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(.primary)
-            .minimumScaleFactor(0.1)
+      if shouldShow {
+        ForEach(appWindows, id: \.uuid) { appWindow in
+          VStack {
+            Text(appWindow.key)
+              .font(.system(size: 36, weight: .bold))
+              .foregroundStyle(.primary)
+            Text(appWindow.name)
+              .font(.system(size: 14, weight: .bold))
+              .foregroundStyle(.primary)
+              .minimumScaleFactor(0.1)
+          }
+          .padding(8)
+          .frame(width: 150, height: 150)
+          .background(Color.black.opacity(0.8))
+          .cornerRadius(10)
+          .position(x: appWindow.x + 75, y: appWindow.y + 10)
         }
-        .padding(8)
-        .frame(width: 150, height: 150)
-        .background(Color.black.opacity(0.8))
-        .cornerRadius(10)
-        .position(x: appWindow.x + 75, y: appWindow.y + 10)
       }
+    }
+    .focusable()
+    .focused($focused)
+    .focusEffectDisabled()
+    .onKeyPress { press in
+      guard let appWindow = appWindows.first(where: { $0.key == press.characters }) else {
+        return .ignored
+      }
+      focusApp(appWindow: appWindow)
+      shouldShow = false
+
+      return .handled
     }
     .onAppear {
       let type = CGWindowListOption.optionOnScreenOnly
@@ -106,6 +123,7 @@ struct ContentView: View {
           appWindows.append(.init(
             uuid: UUID(),
             pid: pid,
+            element: window,
             x: position.x,
             y: position.y,
             name: owner,
@@ -116,25 +134,28 @@ struct ContentView: View {
           }
         }
 
-        //        if let windowList = value as? [AXUIElement], let window = windowList.first {
-        //          var pid: pid_t = 0
-        //          var result = AXUIElementGetPid(window, &pid)
-        //          if result != .success {
-        //            fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
-        //          }
-        //          guard let app = NSRunningApplication(processIdentifier: pid) else {
-        //            fatalError("NSRunningApplication(processIdentifier:) is failed")
-        //          }
-        //          if !app.activate(options: .activateIgnoringOtherApps) {
-        //            fatalError("app.activate(options:) is failed")
-        //          }
-        //          result = AXUIElementSetAttributeValue(window, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-        //          if result != .success {
-        //            fatalError("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
-        //          }
-        //        }
-        //        }
+        focused = true
+        shouldShow = true
       }
+    }
+
+  }
+
+  private func focusApp(appWindow: AppWindow) {
+    var pid: pid_t = 0
+    var result = AXUIElementGetPid(appWindow.element, &pid)
+    if result != .success {
+      fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
+    }
+    guard let app = NSRunningApplication(processIdentifier: pid) else {
+      fatalError("NSRunningApplication(processIdentifier:) is failed")
+    }
+    if !app.activate() {
+      fatalError("app.activate(options:) is failed")
+    }
+    result = AXUIElementSetAttributeValue(appWindow.element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+    if result != .success {
+      fatalError("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
     }
   }
 }
