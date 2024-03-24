@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C942F2BB0899300E06AE5 /* TransparentWindow.swift */; };
+		887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */; };
 		B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */; };
 		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
 		B180F7232BB007D00017A08D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B180F7222BB007D00017A08D /* Assets.xcassets */; };
@@ -36,6 +37,7 @@
 
 /* Begin PBXFileReference section */
 		887C942F2BB0899300E06AE5 /* TransparentWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindow.swift; sourceTree = "<group>"; };
+		887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extension+AXUIElement.swift"; sourceTree = "<group>"; };
 		B180F71B2BB007CF0017A08D /* window-switcher-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "window-switcher-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitcherApp.swift; sourceTree = "<group>"; };
 		B180F7202BB007CF0017A08D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -74,6 +76,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		887C94312BB0910400E06AE5 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		B180F7122BB007CF0017A08D = {
 			isa = PBXGroup;
 			children = (
@@ -97,6 +107,7 @@
 		B180F71D2BB007CF0017A08D /* window-switcher-mac */ = {
 			isa = PBXGroup;
 			children = (
+				887C94312BB0910400E06AE5 /* Extensions */,
 				B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */,
 				B180F7202BB007CF0017A08D /* ContentView.swift */,
 				B180F7222BB007D00017A08D /* Assets.xcassets */,
@@ -265,6 +276,7 @@
 				887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */,
 				B180F7212BB007CF0017A08D /* ContentView.swift in Sources */,
 				B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */,
+				887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
