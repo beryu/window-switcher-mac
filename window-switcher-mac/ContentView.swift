@@ -18,9 +18,10 @@ struct ContentView: View {
   }
 
   @State var window: NSWindow?
+  @State var myAppWindow: AppWindow?
+  @Binding var previouslyActiveApp: NSRunningApplication?
   @State private var appWindows: [AppWindow] = []
   @FocusState private var focused: Bool
-  // global hot key
   private let keys: [String] = [
     "a",
     "b",
@@ -81,6 +82,11 @@ struct ContentView: View {
     .focused($focused)
     .focusEffectDisabled()
     .onKeyPress { press in
+      if press.characters == "\u{1B}" {
+        hide()
+        previouslyActiveApp?.activate()
+        return .handled
+      }
       guard let appWindow = appWindows.first(where: { $0.key == press.characters }) else {
         return .ignored
       }
@@ -112,7 +118,7 @@ struct ContentView: View {
     }
     result = AXUIElementSetAttributeValue(appWindow.element, kAXMainAttribute as CFString, kCFBooleanTrue)
     if result != .success {
-      fatalError("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
+      print("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
     }
   }
 
@@ -124,7 +130,6 @@ struct ContentView: View {
     for entry in windowList ?? [] {
       guard
         let owner = entry[kCGWindowOwnerName as String] as? String,
-        owner != "window-switcher-mac", // Don't include own app
         let pid = entry[kCGWindowOwnerPID as String] as? Int32,
         !appWindows.contains(where: { $0.pid == pid })
       else {
@@ -156,7 +161,18 @@ struct ContentView: View {
         else {
           continue
         }
-        if owner == "Finder" && size == NSScreen.main?.frame.size {
+        if owner == "window-switcher-mac" {
+          myAppWindow = .init(
+            uuid: UUID(),
+            pid: pid,
+            element: element,
+            keyFrame: CGRect.zero,
+            name: owner,
+            key: ""
+          )
+          continue
+        }
+if owner == "Finder" && size == NSScreen.main?.frame.size {
           // Don't include Finder which don't has window
           continue
         }
