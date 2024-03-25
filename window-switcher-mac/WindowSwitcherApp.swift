@@ -8,20 +8,22 @@
 import SwiftUI
 import HotKey
 
-let WIDTH: CGFloat = 400
-let HEIGHT: CGFloat = 200
-
 @main
 struct WindowSwitcherApp: App {
   @State var window: NSWindow?
+  
   let hotKey = HotKey(key: .escape, modifiers: [.command], keyDownHandler: {
     NSApp.activate()
   })
 
   var body: some Scene {
     WindowGroup {
-      ContentView(window: $window)
+      ContentView()
         .background(TransparentWindow())
+        .background(WindowAccessor(window: $window))
+        .onTapGesture {
+          window?.orderOut(nil)
+        }
         .frame(width: NSScreen.main?.frame.width, height: NSScreen.main?.frame.height)
     }
     .windowStyle(HiddenTitleBarWindowStyle())
