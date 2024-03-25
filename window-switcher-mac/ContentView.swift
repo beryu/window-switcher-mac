@@ -15,6 +15,7 @@ struct ContentView: View {
     var keyFrame: CGRect
     var name: String
     var key: String
+    var image: NSImage?
   }
 
   @State var window: NSWindow?
@@ -68,10 +69,18 @@ struct ContentView: View {
           Text(appWindow.key)
             .font(.system(size: 36, weight: .bold))
             .foregroundStyle(.white)
-          Text(appWindow.name)
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(.gray)
-            .minimumScaleFactor(0.1)
+          HStack {
+            if let image = appWindow.image {
+              Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+            }
+            Text(appWindow.name)
+              .font(.system(size: 14, weight: .bold))
+              .foregroundStyle(.gray)
+              .minimumScaleFactor(0.1)
+          }
         }
         .padding(8)
         .frame(width: appWindow.keyFrame.width, height: appWindow.keyFrame.height)
@@ -158,6 +167,13 @@ struct ContentView: View {
         continue
       }
 
+      let iconImage: NSImage?
+      if let app = NSRunningApplication(processIdentifier: pid) {
+        iconImage = app.icon
+      } else {
+        iconImage = nil
+      }
+
       for element in windowList {
         var pid: pid_t = 0
         let result = AXUIElementGetPid(element, &pid)
@@ -178,11 +194,12 @@ struct ContentView: View {
             element: element,
             keyFrame: CGRect.zero,
             name: owner,
-            key: ""
+            key: "",
+            image: iconImage
           )
           continue
         }
-if owner == "Finder" && size == NSScreen.main?.frame.size {
+        if owner == "Finder" && size == NSScreen.main?.frame.size {
           // Don't include Finder which don't has window
           continue
         }
@@ -195,7 +212,8 @@ if owner == "Finder" && size == NSScreen.main?.frame.size {
             size: CGSize(width: 150, height: 150)
           ),
           name: owner,
-          key: keys[appWindows.count]
+          key: keys[appWindows.count],
+          image: iconImage
         ))
         if appWindows.count >= keys.count {
           return
