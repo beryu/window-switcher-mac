@@ -12,9 +12,7 @@ struct ContentView: View {
     var uuid: UUID
     var pid: Int32
     var element: AXUIElement
-    var x: CGFloat
-    var y: CGFloat
-    var size: CGSize
+    var keyFrame: CGRect
     var name: String
     var key: String
   }
@@ -65,13 +63,13 @@ struct ContentView: View {
             .minimumScaleFactor(0.1)
         }
         .padding(8)
-        .frame(width: 150, height: 150)
+        .frame(width: appWindow.keyFrame.width, height: appWindow.keyFrame.height)
         .backgroundStyle(.secondary)
         .background(Color.black.opacity(0.8))
         .cornerRadius(10)
         .position(
-          x: appWindow.x + appWindow.size.width / 2,
-          y: appWindow.y + appWindow.size.height / 2
+          x: appWindow.keyFrame.origin.x,
+          y: appWindow.keyFrame.origin.y
         )
       }
     }
@@ -126,13 +124,14 @@ struct ContentView: View {
     for entry in windowList ?? [] {
       guard
         let owner = entry[kCGWindowOwnerName as String] as? String,
+        owner != "window-switcher-mac", // Don't include own app
         let pid = entry[kCGWindowOwnerPID as String] as? Int32,
         !appWindows.contains(where: { $0.pid == pid })
       else {
         continue
       }
 
-      let appRef = AXUIElementCreateApplication(pid);  //TopLevel Accessability Object of PID
+      let appRef = AXUIElementCreateApplication(pid);
 
       var value: AnyObject?
       let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &value)
@@ -144,32 +143,58 @@ struct ContentView: View {
         continue
       }
 
-      for window in windowList {
+      for element in windowList {
         var pid: pid_t = 0
-        let result = AXUIElementGetPid(window, &pid)
+        let result = AXUIElementGetPid(element, &pid)
         if result != .success {
           fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
         }
 
         guard
-          let position = window.getOrigin(),
-          let size = window.getSize()
+          let position = element.getOrigin(),
+          let size = element.getSize()
         else {
+          continue
+        }
+        if owner == "Finder" && size == NSScreen.main?.frame.size {
+          // Don't include Finder which don't has window
           continue
         }
         appWindows.append(.init(
           uuid: UUID(),
           pid: pid,
-          element: window,
-          x: position.x,
-          y: position.y,
-          size: size,
+          element: element,
+          keyFrame: CGRect(
+            origin: CGPoint(x: position.x + size.width / 2, y: position.y + size.height / 2),
+            size: CGSize(width: 150, height: 150)
+          ),
           name: owner,
           key: keys[appWindows.count]
         ))
         if appWindows.count >= keys.count {
           return
         }
+      }
+
+      // Modify position of overlapping keyFrames
+      var i = 0
+      let margin: CGFloat = 10
+      while i < appWindows.count {
+        let originalKeyFrame = appWindows[i].keyFrame
+        var j = i + 1
+        while j < appWindows.count {
+          if appWindows[i].keyFrame.intersects(appWindows[j].keyFrame) {
+            appWindows[j].keyFrame = CGRect(
+              origin: CGPoint(
+                x: appWindows[i].keyFrame.origin.x + appWindows[j].keyFrame.size.width + margin,
+                y: appWindows[j].keyFrame.origin.y
+              ),
+              size: originalKeyFrame.size
+            )
+          }
+          j += 1
+        }
+        i += 1
       }
     }
 
