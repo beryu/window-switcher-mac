@@ -14,6 +14,7 @@ struct ContentView: View {
     var element: AXUIElement
     var x: CGFloat
     var y: CGFloat
+    var size: CGSize
     var name: String
     var key: String
   }
@@ -52,22 +53,26 @@ struct ContentView: View {
   ]
 
   var body: some View {
-    ZStack {
+    ZStack(alignment: .center) {
       ForEach(appWindows, id: \.uuid) { appWindow in
         VStack {
           Text(appWindow.key)
             .font(.system(size: 36, weight: .bold))
-            .foregroundStyle(.primary)
+            .foregroundStyle(.white)
           Text(appWindow.name)
             .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(.primary)
+            .foregroundStyle(.gray)
             .minimumScaleFactor(0.1)
         }
         .padding(8)
         .frame(width: 150, height: 150)
+        .backgroundStyle(.secondary)
         .background(Color.black.opacity(0.8))
         .cornerRadius(10)
-        .position(x: appWindow.x + 75, y: appWindow.y + 10)
+        .position(
+          x: appWindow.x + appWindow.size.width / 2,
+          y: appWindow.y + appWindow.size.height / 2
+        )
       }
     }
     .onTapGesture {
@@ -107,7 +112,7 @@ struct ContentView: View {
     if !app.activate() {
       fatalError("app.activate(options:) is failed")
     }
-    result = AXUIElementSetAttributeValue(appWindow.element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+    result = AXUIElementSetAttributeValue(appWindow.element, kAXMainAttribute as CFString, kCFBooleanTrue)
     if result != .success {
       fatalError("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
     }
@@ -146,7 +151,10 @@ struct ContentView: View {
           fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
         }
 
-        guard let position = window.getOrigin() else {
+        guard
+          let position = window.getOrigin(),
+          let size = window.getSize()
+        else {
           continue
         }
         appWindows.append(.init(
@@ -155,6 +163,7 @@ struct ContentView: View {
           element: window,
           x: position.x,
           y: position.y,
+          size: size,
           name: owner,
           key: keys[appWindows.count]
         ))
