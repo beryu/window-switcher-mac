@@ -5,7 +5,7 @@ struct TransparentWindow: NSViewRepresentable {
   func makeNSView(context: Self.Context) -> NSView {
     return TransparentWindowView()
   }
-
+  
   func updateNSView(_ nsView: NSView, context: Context) { }
 }
 

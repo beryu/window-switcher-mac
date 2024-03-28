@@ -15,7 +15,7 @@ final class ViewModel: ObservableObject {
     var key: String
     var image: NSImage?
   }
-
+  
   @Published var window: NSWindow?
   @Published var focused: Bool = false
   var previouslyActiveApp: NSRunningApplication? = nil
@@ -80,7 +80,7 @@ final class ViewModel: ObservableObject {
   func becomeInactive() {
     hide()
   }
-
+  
   func monitorHotKey() {
     // NOTE: NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) will fail to focus this app
     hotKey = HotKey(key: .escape, modifiers: [.command], keyDownHandler: { [weak self] in
@@ -113,10 +113,10 @@ final class ViewModel: ObservableObject {
     focusApp(appWindow: appWindow)
     previouslyActiveApp = nil
     hide()
-
+    
     return .handled
   }
-
+  
   func show() {
     window?.orderFront(nil)
     // DispatchQueue.main.async is for workaround of below's warning:
@@ -125,7 +125,7 @@ final class ViewModel: ObservableObject {
       self?.focused = true
     }
   }
-
+  
   func hide() {
     window?.orderOut(nil)
     previouslyActiveApp?.activate()
@@ -135,12 +135,12 @@ final class ViewModel: ObservableObject {
     DispatchQueue.main.async { [weak self] in
       self?.focused = false
     }
-}
-
+  }
+  
   func refreshAppWindows() {
     let type = CGWindowListOption.optionOnScreenOnly
     let windowList = CGWindowListCopyWindowInfo(type, kCGNullWindowID) as NSArray? as? [[String: AnyObject]]
-
+    
     var appWindows: [AppWindow] = []
     for entry in windowList ?? [] {
       guard
@@ -150,33 +150,33 @@ final class ViewModel: ObservableObject {
       else {
         continue
       }
-
+      
       let appRef = AXUIElementCreateApplication(pid);
-
+      
       var value: AnyObject?
       let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &value)
       if result != .success {
         continue
       }
-
+      
       guard let windowList = value as? [AXUIElement] else {
         continue
       }
-
+      
       let iconImage: NSImage?
       if let app = NSRunningApplication(processIdentifier: pid) {
         iconImage = app.icon
       } else {
         iconImage = nil
       }
-
+      
       for element in windowList {
         var pid: pid_t = 0
         let result = AXUIElementGetPid(element, &pid)
         if result != .success {
           fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
         }
-
+        
         guard
           owner != "window-switcher-mac",
           let position = element.getOrigin(),
@@ -204,7 +204,7 @@ final class ViewModel: ObservableObject {
           break
         }
       }
-
+      
       // Modify position of overlapping overlayViewFrames
       var i = 0
       let margin: CGFloat = 10
@@ -228,7 +228,7 @@ final class ViewModel: ObservableObject {
     }
     self.appWindows = appWindows
   }
-
+  
   private func focusApp(appWindow: AppWindow) {
     var pid: pid_t = 0
     var result = AXUIElementGetPid(appWindow.element, &pid)
