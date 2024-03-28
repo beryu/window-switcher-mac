@@ -119,22 +119,29 @@ final class ViewModel: ObservableObject {
 
   func show() {
     window?.orderFront(nil)
-    focused = true
+    // DispatchQueue.main.async is for workaround of below's warning:
+    // "Publishing changes from within view updates is not allowed, this will cause undefined behavior."
+    DispatchQueue.main.async { [weak self] in
+      self?.focused = true
+    }
   }
 
   func hide() {
-    appWindows = []
     window?.orderOut(nil)
     previouslyActiveApp?.activate()
     previouslyActiveApp = nil
-    focused = false
+    // DispatchQueue.main.async is for workaround of below's warning:
+    // "Publishing changes from within view updates is not allowed, this will cause undefined behavior."
+    DispatchQueue.main.async { [weak self] in
+      self?.focused = false
+    }
 }
 
   func refreshAppWindows() {
-    appWindows = []
     let type = CGWindowListOption.optionOnScreenOnly
     let windowList = CGWindowListCopyWindowInfo(type, kCGNullWindowID) as NSArray? as? [[String: AnyObject]]
 
+    var appWindows: [AppWindow] = []
     for entry in windowList ?? [] {
       guard
         let owner = entry[kCGWindowOwnerName as String] as? String,
@@ -194,7 +201,7 @@ final class ViewModel: ObservableObject {
           image: iconImage
         ))
         if appWindows.count >= keys.count {
-          return
+          break
         }
       }
 
@@ -219,6 +226,7 @@ final class ViewModel: ObservableObject {
         i += 1
       }
     }
+    self.appWindows = appWindows
   }
 
   private func focusApp(appWindow: AppWindow) {
