@@ -18,7 +18,6 @@ final class ViewModel: ObservableObject {
 
   @Published var window: NSWindow?
   @Published var focused: Bool = false
-  var myAppWindow: AppWindow?
   var previouslyActiveApp: NSRunningApplication? = nil
   private var hotKey: HotKey?
   private(set) var appWindows: [AppWindow] = []
@@ -172,21 +171,10 @@ final class ViewModel: ObservableObject {
         }
 
         guard
+          owner != "window-switcher-mac",
           let position = element.getOrigin(),
           let size = element.getSize()
         else {
-          continue
-        }
-        if owner == "window-switcher-mac" {
-          myAppWindow = .init(
-            uuid: UUID(),
-            pid: pid,
-            element: element,
-            overlayViewFrame: CGRect.zero,
-            name: owner,
-            key: "",
-            image: iconImage
-          )
           continue
         }
         if owner == "Finder" && size == NSScreen.main?.frame.size {
