@@ -1,10 +1,3 @@
-//
-//  window_switcher_macTests.swift
-//  window-switcher-macTests
-//
-//  Created by 岐部龍太 on 2024/03/24.
-//
-
 import XCTest
 @testable import window_switcher_mac
 

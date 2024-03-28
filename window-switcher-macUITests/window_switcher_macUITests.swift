@@ -1,10 +1,3 @@
-//
-//  window_switcher_macUITests.swift
-//  window-switcher-macUITests
-//
-//  Created by 岐部龍太 on 2024/03/24.
-//
-
 import XCTest
 
 final class window_switcher_macUITests: XCTestCase {
