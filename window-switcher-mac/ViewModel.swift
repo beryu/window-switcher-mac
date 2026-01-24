@@ -2,7 +2,6 @@ import ApplicationServices
 import Foundation
 import SwiftUI
 import Carbon.HIToolbox
-import HotKey
 
 @MainActor
 final class ViewModel: ObservableObject {
@@ -19,7 +18,9 @@ final class ViewModel: ObservableObject {
   @Published var window: NSWindow?
   @Published var focused: Bool = false
   var previouslyActiveApp: NSRunningApplication? = nil
-  private var hotKey: HotKey?
+  // Using nonisolated(unsafe) because GlobalHotKeyManager uses Carbon APIs that work on any thread
+  // and we dispatch back to main thread in the callback
+  nonisolated(unsafe) private var hotKeyManager: GlobalHotKeyManager?
   @Published private(set) var appWindows: [AppWindow] = []
   private let keys: [String] = [
     "a",
@@ -63,6 +64,7 @@ final class ViewModel: ObservableObject {
   init() {
     monitorActiveOrInactive()
     monitorHotKey()
+    refreshAppWindows()
   }
   
   func monitorActiveOrInactive() {
@@ -82,17 +84,25 @@ final class ViewModel: ObservableObject {
   }
   
   func monitorHotKey() {
+    // Using native CGEvent tap for global hotkey
     // NOTE: NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) will fail to focus this app
-    hotKey = HotKey(key: .escape, modifiers: [.command], keyDownHandler: { [weak self] in
-      if let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
-        $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
-      }) {
-        self?.previouslyActiveApp = prevActiveApp
+    // NOTE: Command+Escape is reserved by macOS for Force Quit, so we use Control+Escape instead
+    hotKeyManager = GlobalHotKeyManager.controlEscape { [weak self] in
+      Task { @MainActor in
+        if let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
+          $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
+        }) {
+          self?.previouslyActiveApp = prevActiveApp
+        }
+        self?.refreshAppWindows()
+        self?.show()
+        NSApp.activate()
       }
-      self?.refreshAppWindows()
-      self?.show()
-      NSApp.activate()
-    })
+    }
+    
+    if hotKeyManager == nil {
+      print("Warning: Failed to register global hotkey Control+Escape")
+    }
   }
   
   func checkPermission() {

@@ -8,7 +8,7 @@ struct WindowSwitcherApp: App {
   var body: some Scene {
     WindowGroup {
       ContentView()
-      .background(TransparentWindow())
+        .background(TransparentWindow())
         .background(WindowAccessor(window: $window))
         .onTapGesture {
           window?.orderOut(nil)
@@ -18,3 +18,4 @@ struct WindowSwitcherApp: App {
     .windowStyle(HiddenTitleBarWindowStyle())
   }
 }
+
