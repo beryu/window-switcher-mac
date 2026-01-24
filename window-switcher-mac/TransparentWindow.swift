@@ -12,6 +12,12 @@ struct TransparentWindow: NSViewRepresentable {
 final private class TransparentWindowView: NSView {
   override func viewDidMoveToWindow() {
     window?.backgroundColor = .clear
+    // Hide traffic light buttons (close, minimize, zoom)
+    window?.standardWindowButton(.closeButton)?.isHidden = true
+    window?.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    window?.standardWindowButton(.zoomButton)?.isHidden = true
+    window?.titlebarAppearsTransparent = true
+    window?.titleVisibility = .hidden
     super.viewDidMoveToWindow()
   }
 }
