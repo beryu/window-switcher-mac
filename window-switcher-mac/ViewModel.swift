@@ -11,11 +11,13 @@ final class ViewModel: ObservableObject {
         var element: AXUIElement
         var overlayViewFrame: CGRect
         var name: String
+        var matchableName: String
         var key: String
         var image: NSImage?
     }
     
     @Published private(set) var appWindows: [AppWindow] = []
+    private var allAppWindows: [AppWindow] = []
     @Published private(set) var uiElements: [UIElementModel] = []
     @Published var focused: Bool = false
     @Published var mode: Mode = .windowSwitcher
@@ -38,11 +40,7 @@ final class ViewModel: ObservableObject {
     nonisolated(unsafe) private var uiElementHotKeyManager: GlobalHotKeyManager?
     nonisolated(unsafe) private var scrollHotKeyManager: GlobalHotKeyManager?
     
-    private let keys: [String] = [
-        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-        "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-    ]
+
     
     init(overlayController: OverlayPanelController) {
         self.overlayController = overlayController
@@ -101,12 +99,35 @@ final class ViewModel: ObservableObject {
     func handleGlobalKeyPress(_ key: String) {
         switch mode {
         case .windowSwitcher:
-            guard let appWindow = appWindows.first(where: { $0.key == key }) else {
+            // Check for direct key match first (Handles selected keys like A, B, C or 1, 2, 3)
+            // We check this BEFORE filtering to allow selection of available choices
+            // IMPORTANT: Only select if there is a UNIQUE match. If multiple windows share the key (e.g. prefix matches), we should filter.
+            let keyMatches = appWindows.filter { $0.key.caseInsensitiveCompare(key) == .orderedSame }
+            if keyMatches.count == 1 {
+                focusApp(appWindow: keyMatches[0])
+                previouslyActiveApp = nil
+                hide()
                 return
             }
-            focusApp(appWindow: appWindow)
-            previouslyActiveApp = nil
-            hide()
+            
+            // Append to buffer to check for matches
+            let nextBuffer = inputBuffer + key.lowercased()
+            let matches = allAppWindows.filter { $0.matchableName.starts(with: nextBuffer) }
+            
+            if matches.isEmpty {
+                // Ignore invalid input
+                return
+            }
+            
+            inputBuffer = nextBuffer
+            assignHotKeys()
+            
+            // Auto-activate if only one match
+            if appWindows.count == 1 {
+                focusApp(appWindow: appWindows[0])
+                previouslyActiveApp = nil
+                hide()
+            }
             
         case .uiElement:
             // Append key to buffer
@@ -224,12 +245,12 @@ final class ViewModel: ObservableObject {
         let type = CGWindowListOption.optionOnScreenOnly
         let windowList = CGWindowListCopyWindowInfo(type, kCGNullWindowID) as NSArray? as? [[String: AnyObject]]
         
-        var appWindows: [AppWindow] = []
+        var newAppWindows: [AppWindow] = []
         for entry in windowList ?? [] {
             guard
                 let owner = entry[kCGWindowOwnerName as String] as? String,
                 let pid = entry[kCGWindowOwnerPID as String] as? Int32,
-                !appWindows.contains(where: { $0.pid == pid })
+                !newAppWindows.contains(where: { $0.pid == pid })
             else {
                 continue
             }
@@ -257,7 +278,8 @@ final class ViewModel: ObservableObject {
                 var pid: pid_t = 0
                 let result = AXUIElementGetPid(element, &pid)
                 if result != .success {
-                    fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
+                    print("AXUIElementGetPid is failed with \(result.rawValue)")
+                    continue
                 }
                 
                 guard
@@ -271,7 +293,7 @@ final class ViewModel: ObservableObject {
                     // Don't include Finder which don't has window
                     continue
                 }
-                appWindows.append(.init(
+                newAppWindows.append(.init(
                     uuid: UUID(),
                     pid: pid,
                     element: element,
@@ -280,36 +302,156 @@ final class ViewModel: ObservableObject {
                         size: CGSize(width: 150, height: 150)
                     ),
                     name: owner,
-                    key: keys[appWindows.count],
+                    matchableName: owner.lowercased(),
+                    key: "", // will be assigned
                     image: iconImage
                 ))
-                if appWindows.count >= keys.count {
-                    break
-                }
-            }
-            
-            // Modify position of overlapping overlayViewFrames
-            var i = 0
-            let margin: CGFloat = 10
-            while i < appWindows.count {
-                let originalOverlayViewFrame = appWindows[i].overlayViewFrame
-                var j = i + 1
-                while j < appWindows.count {
-                    if appWindows[i].overlayViewFrame.intersects(appWindows[j].overlayViewFrame) {
-                        appWindows[j].overlayViewFrame = CGRect(
-                            origin: CGPoint(
-                                x: appWindows[i].overlayViewFrame.origin.x + appWindows[j].overlayViewFrame.size.width + margin,
-                                y: appWindows[j].overlayViewFrame.origin.y
-                            ),
-                            size: originalOverlayViewFrame.size
-                        )
-                    }
-                    j += 1
-                }
-                i += 1
             }
         }
-        self.appWindows = appWindows
+        
+        self.allAppWindows = newAppWindows
+        self.inputBuffer = ""
+        assignHotKeys()
+    }
+    
+    private func assignHotKeys() {
+        let filtered: [AppWindow]
+        if inputBuffer.isEmpty {
+            filtered = allAppWindows
+        } else {
+            filtered = allAppWindows.filter { $0.matchableName.starts(with: inputBuffer) }
+        }
+        
+        var resultWindows = filtered
+        
+        // Check if all filtered windows belong to the same app name
+        let uniqueNames = Set(resultWindows.map { $0.matchableName })
+        let isUniqueNameGroup = uniqueNames.count == 1
+        
+        var reservedKeys: Set<String> = []
+        var exactMatchIndices: [Int] = []
+        
+        // First pass: Identify prefix matches and reserve their keys
+        for i in 0..<resultWindows.count {
+            let name = resultWindows[i].matchableName
+            
+            if isUniqueNameGroup || name == inputBuffer {
+                // Will be assigned an index key later
+                exactMatchIndices.append(i)
+            } else {
+                // Prefix match case
+                if inputBuffer.count < name.count {
+                    let index = name.index(name.startIndex, offsetBy: inputBuffer.count)
+                    let key = String(name[index]).uppercased()
+                    resultWindows[i].key = key
+                    reservedKeys.insert(key)
+                } else {
+                    resultWindows[i].key = "?"
+                }
+            }
+        }
+        
+        // Second pass: Assign index keys (A-Z) to exact matches, skipping reserved keys
+        var currentOffset = 0
+        
+        // Group exact matches by name to reset counter for different names (if any, though isUniqueNameGroup makes this simpler)
+        // If not unique group but exact match (e.g. "App" match, "App" match, "Apple" prefix)
+        // We want to number the "App"s.
+        // Actually, previous logic numbered *by name*.
+        // "App" #1, "App" #2.
+        // "Apple" -> 'L'.
+        // If we switch to A-Z, we should probably share the pool or per-name?
+        // User said: "Use A-start alphabets instead of numbers".
+        // Current logic:
+        // "App" #1 -> A
+        // "App" #2 -> B
+        // "Apple" -> L
+        // If L is used, skip it.
+        
+        // We need to track assignment for each exact match group?
+        // Actually, just iterating through exactMatchIndices is fine if we just want unique keys.
+        // But previously we tracked `exactMatchIndices` map to reset count?
+        // With A-Z, uniqueness across the board is safer? Or just per name?
+        // If I have "App" x2 and "Bat" x2. Input empty.
+        // "App" (A), "App" (B). "Bat" (B), "Bat" (A).
+        // Conflict A and B.
+        // But `assignHotKeys` assumes we filtered by name prefixes.
+        // If empty input: Keys are First Letter. A, B.
+        // "App" -> A. "Bat" -> B.
+        // My logic above replaces keys entirely.
+        // If `inputBuffer` is empty, logic uses first char.
+        // `name.index(..., offsetBy: 0)` -> first char.
+        // So `reservedKeys` will have "A", "B".
+        // `exactMatchIndices` will coincide?
+        // `inputBuffer` "A". "App" matches "App" (prefix).
+        // Wait, "App" vs "Apple".
+        // If "App" is exact match? No, inputBuffer="A". "App" is prefix match "p".
+        // Logic covers this.
+        // Only when name == inputBuffer OR isUniqueNameGroup do we fall into "Exact Match".
+        
+        // So we just need to assign keys for the indices we collected.
+        // We should use a single sequence A, B, C... for ALL items needing an index?
+        // Or per name group?
+        // If "App" and "Bob" (both somehow exact match? Impossible unless inputBuffer matches both, which implies same name).
+        // So really only one name group can be "Exact Match" at a time.
+        // OR `isUniqueNameGroup` is true -> multiple windows, same name.
+        // So a single counter is sufficient.
+        
+        for i in exactMatchIndices {
+            // Find next available char
+            while true {
+                 // 0 -> A, 1 -> B
+                 // Check bounds?
+                 if currentOffset > 25 {
+                     // Fallback to numbers if we run out of letters?
+                     // Or double letters? Let's use numbers after Z.
+                     let numIndex = currentOffset - 26 + 1
+                     let key = "\(numIndex)"
+                     if !reservedKeys.contains(key) {
+                         resultWindows[i].key = key
+                         reservedKeys.insert(key)
+                         currentOffset += 1
+                         break
+                     }
+                 } else {
+                     let scalar = UnicodeScalar(65 + currentOffset)! // A=65
+                     let key = String(scalar)
+                     if !reservedKeys.contains(key) {
+                         resultWindows[i].key = key
+                         reservedKeys.insert(key)
+                         currentOffset += 1
+                         break
+                     }
+                 }
+                 currentOffset += 1
+            }
+        }
+        
+        self.appWindows = resolveOverlaps(windows: resultWindows)
+    }
+    
+    private func resolveOverlaps(windows: [AppWindow]) -> [AppWindow] {
+        var windows = windows
+        var i = 0
+        let margin: CGFloat = 10
+        while i < windows.count {
+            let originalOverlayViewFrame = windows[i].overlayViewFrame
+            var j = i + 1
+            while j < windows.count {
+                if windows[i].overlayViewFrame.intersects(windows[j].overlayViewFrame) {
+                    windows[j].overlayViewFrame = CGRect(
+                        origin: CGPoint(
+                            x: windows[i].overlayViewFrame.origin.x + windows[j].overlayViewFrame.size.width + margin,
+                            y: windows[j].overlayViewFrame.origin.y
+                        ),
+                        size: originalOverlayViewFrame.size
+                    )
+                }
+                j += 1
+            }
+            i += 1
+        }
+        return windows
     }
     
     // MARK: - Scroll Mode Actions
