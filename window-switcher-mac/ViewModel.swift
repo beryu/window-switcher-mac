@@ -20,7 +20,7 @@ final class ViewModel: ObservableObject {
   @Published var focused: Bool = false
   var previouslyActiveApp: NSRunningApplication? = nil
   private var hotKey: HotKey?
-  private(set) var appWindows: [AppWindow] = []
+  @Published private(set) var appWindows: [AppWindow] = []
   private let keys: [String] = [
     "a",
     "b",
@@ -119,22 +119,19 @@ final class ViewModel: ObservableObject {
   
   func show() {
     window?.orderFront(nil)
-    // DispatchQueue.main.async is for workaround of below's warning:
-    // "Publishing changes from within view updates is not allowed, this will cause undefined behavior."
-    DispatchQueue.main.async { [weak self] in
-      self?.focused = true
+    Task { @MainActor in
+      focused = true
     }
   }
   
   func hide() {
+    Task { @MainActor in
+      appWindows = []
+      focused = false
+    }
     window?.orderOut(nil)
     previouslyActiveApp?.activate()
     previouslyActiveApp = nil
-    // DispatchQueue.main.async is for workaround of below's warning:
-    // "Publishing changes from within view updates is not allowed, this will cause undefined behavior."
-    DispatchQueue.main.async { [weak self] in
-      self?.focused = false
-    }
   }
   
   func refreshAppWindows() {
