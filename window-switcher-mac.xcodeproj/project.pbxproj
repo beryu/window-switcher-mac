@@ -7,11 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C942F2BB0899300E06AE5 /* TransparentWindow.swift */; };
 		887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */; };
 		88C541AD2BB0B1170049EC15 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 88C541AC2BB0B1170049EC15 /* HotKey */; };
-		88C541AF2BB0FB5E0049EC15 /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88C541AE2BB0FB5E0049EC15 /* WindowAccessor.swift */; };
 		88E6797A2F25691C0037E4E2 /* GlobalHotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */; };
+		88E6797B2F25691C0037E4E2 /* OverlayPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */; };
 		B13766E42BB54CCA002822E1 /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13766E32BB54CCA002822E1 /* ViewModel.swift */; };
 		B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */; };
 		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
@@ -40,10 +39,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		887C942F2BB0899300E06AE5 /* TransparentWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransparentWindow.swift; sourceTree = "<group>"; };
 		887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extension+AXUIElement.swift"; sourceTree = "<group>"; };
-		88C541AE2BB0FB5E0049EC15 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKeyManager.swift; sourceTree = "<group>"; };
+		88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanelController.swift; sourceTree = "<group>"; };
 		B13766E32BB54CCA002822E1 /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
 		B180F71B2BB007CF0017A08D /* window-switcher-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "window-switcher-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitcherApp.swift; sourceTree = "<group>"; };
@@ -115,15 +113,14 @@
 		B180F71D2BB007CF0017A08D /* window-switcher-mac */ = {
 			isa = PBXGroup;
 			children = (
-				88C541AE2BB0FB5E0049EC15 /* WindowAccessor.swift */,
 				887C94312BB0910400E06AE5 /* Extensions */,
 				B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */,
 				B180F7202BB007CF0017A08D /* ContentView.swift */,
 				88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */,
+				88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */,
 				B180F7222BB007D00017A08D /* Assets.xcassets */,
 				B180F7272BB007D00017A08D /* window_switcher_mac.entitlements */,
 				B180F7242BB007D00017A08D /* Preview Content */,
-				887C942F2BB0899300E06AE5 /* TransparentWindow.swift */,
 				B13766E32BB54CCA002822E1 /* ViewModel.swift */,
 			);
 			path = "window-switcher-mac";
@@ -290,12 +287,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				887C94302BB0899300E06AE5 /* TransparentWindow.swift in Sources */,
 				B180F7212BB007CF0017A08D /* ContentView.swift in Sources */,
-				88C541AF2BB0FB5E0049EC15 /* WindowAccessor.swift in Sources */,
 				B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */,
 				B13766E42BB54CCA002822E1 /* ViewModel.swift in Sources */,
 				88E6797A2F25691C0037E4E2 /* GlobalHotKeyManager.swift in Sources */,
+				88E6797B2F25691C0037E4E2 /* OverlayPanelController.swift in Sources */,
 				887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

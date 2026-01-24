@@ -2,20 +2,30 @@ import SwiftUI
 
 @main
 struct WindowSwitcherApp: App {
-  @State var window: NSWindow?
-  static var previouslyActiveApp: NSRunningApplication?
-
-  var body: some Scene {
-    WindowGroup {
-      ContentView()
-        .background(TransparentWindow())
-        .background(WindowAccessor(window: $window))
-        .onTapGesture {
-          window?.orderOut(nil)
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    var body: some Scene {
+        // Empty Settings scene to keep app running without visible window
+        Settings {
+            EmptyView()
         }
-        .frame(width: NSScreen.main?.frame.width, height: NSScreen.main?.frame.height)
     }
-    .windowStyle(HiddenTitleBarWindowStyle())
-  }
 }
 
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var viewModel: ViewModel?
+    private var overlayController: OverlayPanelController?
+    
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Hide dock icon since this is an overlay-only app
+        NSApp.setActivationPolicy(.accessory)
+        
+        // Initialize overlay system
+        overlayController = OverlayPanelController()
+        viewModel = ViewModel(overlayController: overlayController!)
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        overlayController?.hideOverlay()
+    }
+}
