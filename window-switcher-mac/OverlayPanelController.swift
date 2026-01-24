@@ -42,6 +42,11 @@ final class OverlayPanelController {
         panel?.isVisible ?? false
     }
     
+    /// Sets whether the overlay ignores mouse events (click-through)
+    func setIgnoresMouseEvents(_ ignores: Bool) {
+        panel?.ignoresMouseEvents = ignores
+    }
+    
     // MARK: - Private
     
     private func createPanel() {

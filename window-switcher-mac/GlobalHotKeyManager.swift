@@ -10,6 +10,7 @@ final class GlobalHotKeyManager {
   private var runLoopSource: CFRunLoopSource?
   private let hotKeyHandler: Handler
   private let keyCode: CGKeyCode
+  private let modifiers: UInt64
   
   // Overlay mode handlers
   private var overlayKeyHandler: KeyHandler?
@@ -17,14 +18,15 @@ final class GlobalHotKeyManager {
   private var isOverlayActive: Bool = false
   
   // Carbon modifier flag masks
-  private static let kCommandKeyMask: UInt64 = 0x00100000
-  private static let kShiftKeyMask: UInt64 = 0x00020000
-  private static let kOptionKeyMask: UInt64 = 0x00080000   // Option/Alt key
-  private static let kControlKeyMask: UInt64 = 0x00040000
+  public static let kCommandKeyMask: UInt64 = 0x00100000
+  public static let kShiftKeyMask: UInt64 = 0x00020000
+  public static let kOptionKeyMask: UInt64 = 0x00080000   // Option/Alt key
+  public static let kControlKeyMask: UInt64 = 0x00040000
   
-  init?(keyCode: CGKeyCode, handler: @escaping Handler) {
+  init?(keyCode: CGKeyCode, modifiers: UInt64, handler: @escaping Handler) {
     self.hotKeyHandler = handler
     self.keyCode = keyCode
+    self.modifiers = modifiers
     
     // Check accessibility permissions
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
@@ -63,11 +65,18 @@ final class GlobalHotKeyManager {
         let hasOption = (modifierFlags & GlobalHotKeyManager.kOptionKeyMask) != 0
         let hasControl = (modifierFlags & GlobalHotKeyManager.kControlKeyMask) != 0
         
-        // Handle Control+Escape hotkey (always active)
+        // Calculate current modifiers mask
+        var currentModifiers: UInt64 = 0
+        if hasCommand { currentModifiers |= GlobalHotKeyManager.kCommandKeyMask }
+        if hasShift { currentModifiers |= GlobalHotKeyManager.kShiftKeyMask }
+        if hasOption { currentModifiers |= GlobalHotKeyManager.kOptionKeyMask }
+        if hasControl { currentModifiers |= GlobalHotKeyManager.kControlKeyMask }
+        
+        // Handle trigger hotkey (always active)
         if eventKeyCode == manager.keyCode {
-          // Only Control should be pressed (no other modifiers)
-          if hasControl && !hasShift && !hasCommand && !hasOption {
-            print("GlobalHotKeyManager: Control+Escape detected! Calling handler.")
+          // Check if modifiers match exactly
+          if currentModifiers == manager.modifiers {
+            print("GlobalHotKeyManager: Hotkey detected! Calling handler.")
             DispatchQueue.main.async {
               manager.hotKeyHandler()
             }
@@ -124,7 +133,7 @@ final class GlobalHotKeyManager {
     // Enable the event tap
     CGEvent.tapEnable(tap: tap, enable: true)
     
-    print("GlobalHotKeyManager: Successfully registered hotkey Control+Escape")
+    print("GlobalHotKeyManager: Successfully registered hotkey")
   }
   
   /// Enable overlay mode to capture all keyboard input
@@ -205,13 +214,44 @@ private struct HotKeyContext {
   weak var manager: GlobalHotKeyManager?
 }
 
-// MARK: - Convenience initializer for Control+Escape
+// MARK: - Convenience initializer
 extension GlobalHotKeyManager {
   /// Creates a hotkey for Control + Escape
   static func controlEscape(handler: @escaping Handler) -> GlobalHotKeyManager? {
     // kVK_Escape = 0x35 (53)
     return GlobalHotKeyManager(
       keyCode: CGKeyCode(kVK_Escape),
+      modifiers: kControlKeyMask,
+      handler: handler
+    )
+  }
+    
+  /// Creates a hotkey for Option + Escape
+  static func optionEscape(handler: @escaping Handler) -> GlobalHotKeyManager? {
+    // kVK_Escape = 0x35 (53)
+    return GlobalHotKeyManager(
+      keyCode: CGKeyCode(kVK_Escape),
+      modifiers: kOptionKeyMask,
+      handler: handler
+    )
+  }
+    
+  /// Creates a hotkey for Command + Shift + S
+  static func commandShiftS(handler: @escaping Handler) -> GlobalHotKeyManager? {
+    // kVK_ANSI_S = 0x01 (1)
+    return GlobalHotKeyManager(
+      keyCode: CGKeyCode(kVK_ANSI_S),
+      modifiers: kCommandKeyMask | kShiftKeyMask,
+      handler: handler
+    )
+  }
+    
+  /// Creates a hotkey for Control + Option + Escape
+  static func controlOptionEscape(handler: @escaping Handler) -> GlobalHotKeyManager? {
+    // kVK_Escape = 0x35 (53)
+    return GlobalHotKeyManager(
+      keyCode: CGKeyCode(kVK_Escape),
+      modifiers: kControlKeyMask | kOptionKeyMask,
       handler: handler
     )
   }
