@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
   @ObservedObject private var viewModel = ViewModel()
-  @FocusState private var focused: Bool
   
   var body: some View {
     ZStack(alignment: .center) {
@@ -39,17 +38,8 @@ struct ContentView: View {
       viewModel.hide()
     }
     .background(WindowAccessor(window: $viewModel.window))
-    .focusable()
-    .focused($focused)
-    .focusEffectDisabled()
     .onAppear {
       viewModel.checkPermission()
-    }
-    .onKeyPress { press in
-      viewModel.onKeyPress(press)
-    }
-    .onChange(of: viewModel.focused) {
-      focused = viewModel.focused
     }
   }
 }

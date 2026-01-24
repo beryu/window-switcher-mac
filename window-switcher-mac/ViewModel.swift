@@ -111,20 +111,14 @@ final class ViewModel: ObservableObject {
     _ = AXIsProcessTrustedWithOptions(options)
   }
   
-  func onKeyPress(_ press: KeyPress) -> KeyPress.Result {
-    // hide when escape pressed
-    if press.characters == "\u{1B}" {
-      hide()
-      return .handled
-    }
-    guard let appWindow = appWindows.first(where: { $0.key == press.characters }) else {
-      return .ignored
+  /// Handle key press from global key capture
+  func handleGlobalKeyPress(_ key: String) {
+    guard let appWindow = appWindows.first(where: { $0.key == key }) else {
+      return
     }
     focusApp(appWindow: appWindow)
     previouslyActiveApp = nil
     hide()
-    
-    return .handled
   }
   
   func show() {
@@ -132,9 +126,26 @@ final class ViewModel: ObservableObject {
     Task { @MainActor in
       focused = true
     }
+    
+    // Enable global key capture during overlay display
+    hotKeyManager?.enableOverlayMode(
+      keyHandler: { [weak self] key in
+        Task { @MainActor in
+          self?.handleGlobalKeyPress(key)
+        }
+      },
+      escapeHandler: { [weak self] in
+        Task { @MainActor in
+          self?.hide()
+        }
+      }
+    )
   }
   
   func hide() {
+    // Disable global key capture
+    hotKeyManager?.disableOverlayMode()
+    
     Task { @MainActor in
       appWindows = []
       focused = false
@@ -240,17 +251,20 @@ final class ViewModel: ObservableObject {
     var pid: pid_t = 0
     var result = AXUIElementGetPid(appWindow.element, &pid)
     if result != .success {
-      fatalError("AXUIElementGetPid is failed with \(result.rawValue)")
+      print("focusApp: AXUIElementGetPid failed with \(result.rawValue)")
+      return
     }
     guard let app = NSRunningApplication(processIdentifier: pid) else {
-      fatalError("NSRunningApplication(processIdentifier:) is failed")
+      print("focusApp: NSRunningApplication(processIdentifier:) failed for pid \(pid)")
+      return
     }
     if !app.activate() {
-      fatalError("app.activate(options:) is failed")
+      print("focusApp: app.activate() failed for \(app.localizedName ?? "unknown app")")
+      // Still try to set the main attribute even if activate failed
     }
     result = AXUIElementSetAttributeValue(appWindow.element, kAXMainAttribute as CFString, kCFBooleanTrue)
     if result != .success {
-      print("Set kAXFocusedAttribute with AXUIElementSetAttributeValue is failed with \(result.rawValue)...")
+      print("focusApp: AXUIElementSetAttributeValue failed with \(result.rawValue)")
     }
   }
 }

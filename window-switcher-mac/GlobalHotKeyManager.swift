@@ -4,11 +4,17 @@ import Carbon.HIToolbox
 /// A native global hotkey manager using CGEvent tap
 final class GlobalHotKeyManager {
   typealias Handler = () -> Void
+  typealias KeyHandler = (String) -> Void
   
   private var eventTap: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
-  private let handler: Handler
+  private let hotKeyHandler: Handler
   private let keyCode: CGKeyCode
+  
+  // Overlay mode handlers
+  private var overlayKeyHandler: KeyHandler?
+  private var overlayEscapeHandler: Handler?
+  private var isOverlayActive: Bool = false
   
   // Carbon modifier flag masks
   private static let kCommandKeyMask: UInt64 = 0x00100000
@@ -17,7 +23,7 @@ final class GlobalHotKeyManager {
   private static let kControlKeyMask: UInt64 = 0x00040000
   
   init?(keyCode: CGKeyCode, handler: @escaping Handler) {
-    self.handler = handler
+    self.hotKeyHandler = handler
     self.keyCode = keyCode
     
     // Check accessibility permissions
@@ -51,23 +57,50 @@ final class GlobalHotKeyManager {
         let eventKeyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
         let modifierFlags = event.flags.rawValue
         
-        // Check if this is the Escape key
+        // Check modifiers
+        let hasCommand = (modifierFlags & GlobalHotKeyManager.kCommandKeyMask) != 0
+        let hasShift = (modifierFlags & GlobalHotKeyManager.kShiftKeyMask) != 0
+        let hasOption = (modifierFlags & GlobalHotKeyManager.kOptionKeyMask) != 0
+        let hasControl = (modifierFlags & GlobalHotKeyManager.kControlKeyMask) != 0
+        
+        // Handle Control+Escape hotkey (always active)
         if eventKeyCode == manager.keyCode {
-          // Check modifiers using raw bitmask
-          let hasCommand = (modifierFlags & GlobalHotKeyManager.kCommandKeyMask) != 0
-          let hasShift = (modifierFlags & GlobalHotKeyManager.kShiftKeyMask) != 0
-          let hasOption = (modifierFlags & GlobalHotKeyManager.kOptionKeyMask) != 0
-          let hasControl = (modifierFlags & GlobalHotKeyManager.kControlKeyMask) != 0
-          
-           // Only Control should be pressed (no other modifiers)
+          // Only Control should be pressed (no other modifiers)
           if hasControl && !hasShift && !hasCommand && !hasOption {
             print("GlobalHotKeyManager: Control+Escape detected! Calling handler.")
             DispatchQueue.main.async {
-              manager.handler()
+              manager.hotKeyHandler()
             }
             // Consume the event so it doesn't propagate
             return nil
           }
+        }
+        
+        // Handle overlay mode key capture
+        if manager.isOverlayActive {
+          // No modifiers should be pressed for overlay key handling
+          if !hasCommand && !hasShift && !hasOption && !hasControl {
+            // Handle Escape key to close overlay
+            if eventKeyCode == CGKeyCode(kVK_Escape) {
+              print("GlobalHotKeyManager: Escape detected during overlay, closing.")
+              DispatchQueue.main.async {
+                manager.overlayEscapeHandler?()
+              }
+              return nil
+            }
+            
+            // Convert key code to character
+            if let character = manager.keyCodeToCharacter(eventKeyCode) {
+              print("GlobalHotKeyManager: Key '\(character)' captured during overlay.")
+              DispatchQueue.main.async {
+                manager.overlayKeyHandler?(character)
+              }
+              return nil
+            }
+          }
+          
+          // During overlay mode, consume all key events to prevent other apps from receiving them
+          return nil
         }
         
         return Unmanaged.passRetained(event)
@@ -92,6 +125,68 @@ final class GlobalHotKeyManager {
     CGEvent.tapEnable(tap: tap, enable: true)
     
     print("GlobalHotKeyManager: Successfully registered hotkey Control+Escape")
+  }
+  
+  /// Enable overlay mode to capture all keyboard input
+  func enableOverlayMode(keyHandler: @escaping KeyHandler, escapeHandler: @escaping Handler) {
+    self.overlayKeyHandler = keyHandler
+    self.overlayEscapeHandler = escapeHandler
+    self.isOverlayActive = true
+    print("GlobalHotKeyManager: Overlay mode enabled - capturing all keyboard input")
+  }
+  
+  /// Disable overlay mode and stop capturing all keyboard input
+  func disableOverlayMode() {
+    self.isOverlayActive = false
+    self.overlayKeyHandler = nil
+    self.overlayEscapeHandler = nil
+    print("GlobalHotKeyManager: Overlay mode disabled")
+  }
+  
+  /// Convert CGKeyCode to character string
+  private func keyCodeToCharacter(_ keyCode: CGKeyCode) -> String? {
+    // Map of key codes to characters (US keyboard layout)
+    let keyMap: [CGKeyCode: String] = [
+      // Letters
+      CGKeyCode(kVK_ANSI_A): "a",
+      CGKeyCode(kVK_ANSI_B): "b",
+      CGKeyCode(kVK_ANSI_C): "c",
+      CGKeyCode(kVK_ANSI_D): "d",
+      CGKeyCode(kVK_ANSI_E): "e",
+      CGKeyCode(kVK_ANSI_F): "f",
+      CGKeyCode(kVK_ANSI_G): "g",
+      CGKeyCode(kVK_ANSI_H): "h",
+      CGKeyCode(kVK_ANSI_I): "i",
+      CGKeyCode(kVK_ANSI_J): "j",
+      CGKeyCode(kVK_ANSI_K): "k",
+      CGKeyCode(kVK_ANSI_L): "l",
+      CGKeyCode(kVK_ANSI_M): "m",
+      CGKeyCode(kVK_ANSI_N): "n",
+      CGKeyCode(kVK_ANSI_O): "o",
+      CGKeyCode(kVK_ANSI_P): "p",
+      CGKeyCode(kVK_ANSI_Q): "q",
+      CGKeyCode(kVK_ANSI_R): "r",
+      CGKeyCode(kVK_ANSI_S): "s",
+      CGKeyCode(kVK_ANSI_T): "t",
+      CGKeyCode(kVK_ANSI_U): "u",
+      CGKeyCode(kVK_ANSI_V): "v",
+      CGKeyCode(kVK_ANSI_W): "w",
+      CGKeyCode(kVK_ANSI_X): "x",
+      CGKeyCode(kVK_ANSI_Y): "y",
+      CGKeyCode(kVK_ANSI_Z): "z",
+      // Numbers
+      CGKeyCode(kVK_ANSI_0): "0",
+      CGKeyCode(kVK_ANSI_1): "1",
+      CGKeyCode(kVK_ANSI_2): "2",
+      CGKeyCode(kVK_ANSI_3): "3",
+      CGKeyCode(kVK_ANSI_4): "4",
+      CGKeyCode(kVK_ANSI_5): "5",
+      CGKeyCode(kVK_ANSI_6): "6",
+      CGKeyCode(kVK_ANSI_7): "7",
+      CGKeyCode(kVK_ANSI_8): "8",
+      CGKeyCode(kVK_ANSI_9): "9",
+    ]
+    return keyMap[keyCode]
   }
   
   deinit {
