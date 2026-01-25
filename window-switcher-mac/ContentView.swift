@@ -156,27 +156,33 @@ struct OverlayContentView: View {
                 }
             } else if viewModel.mode == .scroll {
                 // Scroll Mode Indicator
-                VStack(spacing: 20) {
-                    Image(systemName: "scroll")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 80, height: 80)
-                        .foregroundStyle(.white)
-                    Text("Scroll Mode")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
-                    HStack(spacing: 20) {
-                        Label("H: Left", systemImage: "arrow.left")
-                        Label("J: Down", systemImage: "arrow.down")
-                        Label("K: Up", systemImage: "arrow.up")
-                        Label("L: Right", systemImage: "arrow.right")
+                // Scroll Mode Indicator
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "scroll")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(.white)
+                                Text("Scroll Mode")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            
+                            HStack(spacing: 12) {
+                                Text("H: ←  J: ↓  K: ↑  L: →")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.gray)
+                            }
+                        }
+                        .padding(16)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(12)
+                        .padding(20)
                     }
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.gray)
                 }
-                .padding(40)
-                .background(Color.black.opacity(0.7))
-                .cornerRadius(20)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
