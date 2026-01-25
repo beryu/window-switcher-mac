@@ -130,6 +130,14 @@ final class ViewModel: ObservableObject {
             }
             
         case .uiElement:
+            if key == "\n" {
+                // Confirm selection if exact match exists
+                if let element = uiElements.first(where: { $0.label == inputBuffer }) {
+                    clickUIElement(element)
+                    return
+                }
+            }
+            
             // Append key to buffer
             inputBuffer += key
             
@@ -137,9 +145,7 @@ final class ViewModel: ObservableObject {
             let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
             
             if matchingElements.isEmpty {
-                // No match, reset buffer? Or keep it and show error?
-                // For now, reset if no match found at all locally, but maybe better to just ignore?
-                // If the user typed a wrong character, they might want to clear.
+                // No match
                 // Let's reset buffer if invalid sequence
                 inputBuffer = ""
                 return
@@ -155,6 +161,14 @@ final class ViewModel: ObservableObject {
             
         case .scrollTargetSelection:
              // Similar to uiElement logic but transitions to scroll mode
+             if key == "\n" {
+                 if let element = uiElements.first(where: { $0.label == inputBuffer }) {
+                     let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
+                     transitionToScrollMode(targetCenter: center)
+                     return
+                 }
+             }
+
              inputBuffer += key
              let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
              

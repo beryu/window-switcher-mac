@@ -194,6 +194,9 @@ final class GlobalHotKeyManager {
       CGKeyCode(kVK_ANSI_7): "7",
       CGKeyCode(kVK_ANSI_8): "8",
       CGKeyCode(kVK_ANSI_9): "9",
+      // Special Keys
+      CGKeyCode(kVK_Return): "\n",
+      CGKeyCode(kVK_ANSI_KeypadEnter): "\n",
     ]
     return keyMap[keyCode]
   }
