@@ -137,6 +137,17 @@ struct OverlayContentView: View {
                 // Scroll Target Selection - Show all elements directly (no clustering)
                 ForEach(viewModel.uiElements.filter { $0.frame.intersects(screenFrame) }) { element in
                     let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
+                    
+                    // Highlight border
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.green, lineWidth: 4)
+                        .frame(width: element.frame.width, height: element.frame.height)
+                        .position(
+                            x: element.frame.midX - screenFrame.origin.x,
+                            y: element.frame.midY - screenFrame.origin.y
+                        )
+                        .opacity(isMatch ? 0.8 : 0.1)
+                        
                     UIElementLabelView(
                         element: element,
                         screenFrame: screenFrame
