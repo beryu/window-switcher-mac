@@ -12,6 +12,7 @@ struct ZoomedScreenshotView: View {
     let cluster: ClusterModel
     let zoomScale: CGFloat
     let windowFrame: CGRect  // Window frame in CG coordinates (top-left origin)
+    var screenFrame: CGRect = .zero
     
     /// Calculate the crop rect for the cluster area relative to the window
     private var cropRect: CGRect {
@@ -33,9 +34,7 @@ struct ZoomedScreenshotView: View {
     
     /// Screen center for positioning
     private var screenCenter: CGPoint {
-        NSScreen.main.map {
-            CGPoint(x: $0.frame.width / 2, y: $0.frame.height / 2)
-        } ?? CGPoint(x: 960, y: 540)
+        CGPoint(x: screenFrame.width / 2, y: screenFrame.height / 2)
     }
     
     var body: some View {

@@ -8,6 +8,7 @@
 import Cocoa
 import ApplicationServices
 import Foundation
+import ScreenCaptureKit
 
 /// Scans the frontmost window for clickable UI elements
 final class UIElementScanner {
@@ -404,6 +405,11 @@ final class UIElementScanner {
     
     /// Get the frame of the focused window for a specific process
     func getFocusedWindowFrame(pid: pid_t) -> CGRect? {
+        return getFocusedWindowInfo(pid: pid)?.frame
+    }
+    
+    /// Get window ID and frame of the focused window
+    func getFocusedWindowInfo(pid: pid_t) -> (id: CGWindowID, frame: CGRect)? {
         let appElement = AXUIElementCreateApplication(pid)
         
         var focusedWindow: AnyObject?
@@ -412,6 +418,83 @@ final class UIElementScanner {
         guard result == .success, let windowElement = focusedWindow else { return nil }
         
         let axWindow = windowElement as! AXUIElement
-        return axWindow.getFrame()
+        
+        guard let frame = axWindow.getFrame() else { return nil }
+        
+        // Use CGWindowList to find the corresponding window ID
+        // This is robust enough for finding the ID of the focused window
+        let options = CGWindowListOption([.optionOnScreenOnly, .excludeDesktopElements])
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        
+        // Find windows belonging to the target process
+        let targetWindows = windowList.filter { info in
+            guard let windowPID = info[kCGWindowOwnerPID as String] as? Int32 else { return false }
+            return windowPID == pid
+        }
+        
+        // We need to match the window based on position/size
+        // Allows for 1px tolerance due to potential float conversions
+        for info in targetWindows {
+            if let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
+               let x = boundsDict["X"] as? CGFloat,
+               let y = boundsDict["Y"] as? CGFloat,
+               let width = boundsDict["Width"] as? CGFloat,
+               let height = boundsDict["Height"] as? CGFloat,
+               let id = info[kCGWindowNumber as String] as? CGWindowID {
+                
+                let cgRect = CGRect(x: x, y: y, width: width, height: height)
+                if abs(cgRect.origin.x - frame.origin.x) < 2 &&
+                   abs(cgRect.origin.y - frame.origin.y) < 2 &&
+                   abs(cgRect.width - frame.width) < 2 &&
+                   abs(cgRect.height - frame.height) < 2 {
+                    return (id, frame)
+                }
+            }
+        }
+        
+        // Fallback: If exact match fails, take the first one (often the focused one is first)
+        if let first = targetWindows.first,
+           let id = first[kCGWindowNumber as String] as? CGWindowID {
+             print("UIElementScanner: Exact frame match failed, using first window for PID \(pid)")
+             return (id, frame)
+        }
+        
+        return nil
+    }
+}
+
+/// Service for capturing screen content using ScreenCaptureKit
+final class ScreenRecorder {
+    
+    /// Capture a single screenshot of a specific window
+    /// - Parameter windowID: The CGWindowID of the window to capture
+    /// - Returns: NSImage of the captured window, or nil if capture failed
+    static func captureWindow(windowID: CGWindowID) async throws -> NSImage? {
+        // 1. Get available content
+        let availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        
+        // 2. Find the target window
+        guard let window = availableContent.windows.first(where: { $0.windowID == windowID }) else {
+            print("ScreenRecorder: Window with ID \(windowID) not found")
+            return nil
+        }
+        
+        // 3. Create content filter (target the window, exclude nothing else specifically as we want just the window)
+        // desktopIndependentWindow filter creates a capture of just the window
+        let filter = SCContentFilter(desktopIndependentWindow: window)
+        
+        // 4. Create configuration
+        let config = SCStreamConfiguration()
+        config.width = Int(window.frame.width)
+        config.height = Int(window.frame.height)
+        config.showsCursor = false
+        
+        // 5. Capture image
+        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        
+        // 6. Convert to NSImage
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 }

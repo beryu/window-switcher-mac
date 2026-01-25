@@ -3,6 +3,7 @@ import SwiftUI
 /// Overlay content view displayed on top of all windows
 struct OverlayContentView: View {
     @ObservedObject var viewModel: ViewModel
+    var screenFrame: CGRect = .zero
     
     var body: some View {
         ZStack(alignment: .center) {
@@ -14,7 +15,13 @@ struct OverlayContentView: View {
             
             if viewModel.mode == .windowSwitcher {
                 // Window labels
-                ForEach(viewModel.appWindows, id: \.uuid) { appWindow in
+                ForEach(viewModel.appWindows.filter {
+                    let frame = $0.overlayViewFrame
+                    // Check intersection with screen frame (allowing some margin/tolerance if needed)
+                    // Simple check: does the center point lie within this screen?
+                    // Or precise intersection. Let's start with intersection.
+                    return frame.intersects(screenFrame)
+                }, id: \.uuid) { appWindow in
                     VStack {
                         Text(appWindow.key)
                             .font(.system(size: 36, weight: .bold))
@@ -38,28 +45,32 @@ struct OverlayContentView: View {
                     .background(Color.black.opacity(0.8))
                     .cornerRadius(10)
                     .position(
-                        x: appWindow.overlayViewFrame.origin.x,
-                        y: appWindow.overlayViewFrame.origin.y
+                        x: appWindow.overlayViewFrame.origin.x - screenFrame.origin.x,
+                        y: appWindow.overlayViewFrame.origin.y - screenFrame.origin.y
                     )
                 }
-            } else if viewModel.mode == .uiElement || viewModel.mode == .scrollTargetSelection {
+            } else if viewModel.mode == .uiElement {
                 // UI Element labels with clustering support
                 if viewModel.uiElementSubMode == .clusterSelection {
                     // Phase 1: Show clusters and isolated elements
                     
                     // Display clusters
-                    ForEach(viewModel.clusters) { cluster in
+                    ForEach(viewModel.clusters.filter { $0.boundingFrame.intersects(screenFrame) }) { cluster in
                         ClusterLabelView(
                             cluster: cluster,
-                            isSelected: false
+                            isSelected: false,
+                            screenFrame: screenFrame
                         )
                     }
                     
                     // Display isolated elements
-                    ForEach(viewModel.isolatedElements) { element in
+                    ForEach(viewModel.isolatedElements.filter { $0.frame.intersects(screenFrame) }) { element in
                         let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
-                        UIElementLabelView(element: element)
-                            .opacity(isMatch ? 1.0 : 0.1)
+                        UIElementLabelView(
+                            element: element,
+                            screenFrame: screenFrame
+                        )
+                        .opacity(isMatch ? 1.0 : 0.1)
                     }
                 } else {
                     // Phase 2: Show elements within selected cluster (ZOOMED IN)
@@ -70,18 +81,21 @@ struct OverlayContentView: View {
                     
                     // Display zoomed screenshot of the cluster area
                     if let screenshot = viewModel.windowScreenshot,
-                       let selectedCluster = viewModel.selectedCluster {
+                       let selectedCluster = viewModel.selectedCluster,
+                       selectedCluster.boundingFrame.intersects(screenFrame) {
                         ZoomedScreenshotView(
                             screenshot: screenshot,
                             cluster: selectedCluster,
                             zoomScale: viewModel.zoomScale,
-                            windowFrame: viewModel.windowFrame
+                            windowFrame: viewModel.windowFrame,
+                            screenFrame: screenFrame
                         )
                     }
                     
                     // Zoomed cluster info at top
                     VStack {
-                        if let selectedCluster = viewModel.selectedCluster {
+                        if let selectedCluster = viewModel.selectedCluster,
+                           selectedCluster.boundingFrame.intersects(screenFrame) {
                             HStack {
                                 Image(systemName: "magnifyingglass")
                                 Text("Cluster \(selectedCluster.label) - \(selectedCluster.count) elements")
@@ -99,15 +113,35 @@ struct OverlayContentView: View {
                     .padding(.top, 40)
                     
                     // Show elements in the selected cluster with zoom
-                    ForEach(viewModel.uiElements) { element in
-                        let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
-                        UIElementLabelView(
-                            element: element,
-                            zoomScale: viewModel.zoomScale,
-                            zoomCenter: viewModel.zoomCenter
-                        )
-                        .opacity(isMatch ? 1.0 : 0.1)
+                    // Only show if the loop itself is for elements that belong to this screen if we pushed filtering down
+                    // But here viewModel.uiElements contains ALL elements in the cluster.
+                    // We need to render them only on the screen that intersects the cluster.
+                    // Since Phase 2 is "Zoomed into ONE cluster", all elements are likely on the same screen (unless cluster spans screens, which we try to avoid).
+                    
+                    if let selectedCluster = viewModel.selectedCluster,
+                       selectedCluster.boundingFrame.intersects(screenFrame) {
+                        
+                        ForEach(viewModel.uiElements) { element in
+                            let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
+                            UIElementLabelView(
+                                element: element,
+                                zoomScale: viewModel.zoomScale,
+                                zoomCenter: viewModel.zoomCenter,
+                                screenFrame: screenFrame
+                            )
+                            .opacity(isMatch ? 1.0 : 0.1)
+                        }
                     }
+                }
+            } else if viewModel.mode == .scrollTargetSelection {
+                // Scroll Target Selection - Show all elements directly (no clustering)
+                ForEach(viewModel.uiElements.filter { $0.frame.intersects(screenFrame) }) { element in
+                    let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
+                    UIElementLabelView(
+                        element: element,
+                        screenFrame: screenFrame
+                    )
+                    .opacity(isMatch ? 1.0 : 0.1)
                 }
             } else if viewModel.mode == .scroll {
                 // Scroll Mode Indicator

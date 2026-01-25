@@ -11,31 +11,35 @@ struct UIElementLabelView: View {
     let element: UIElementModel
     var zoomScale: CGFloat = 1.0
     var zoomCenter: CGPoint = .zero
+    var screenFrame: CGRect = .zero
     
     /// Calculate zoomed position for the element
     private var zoomedPosition: CGPoint {
-        let originalX = element.overlayFrame.origin.x + 12
-        let originalY = element.overlayFrame.origin.y + 12
+        let globalX = element.overlayFrame.origin.x + 12
+        let globalY = element.overlayFrame.origin.y + 12
+        
+        // Local coordinates in the current overlay panel
+        let localX = globalX - screenFrame.origin.x
+        let localY = globalY - screenFrame.origin.y
         
         if zoomScale == 1.0 {
-            return CGPoint(x: originalX, y: originalY)
+            return CGPoint(x: localX, y: localY)
         }
         
-        // Get screen center for zoom pivot
-        let screenCenter = NSScreen.main.map { 
-            CGPoint(x: $0.frame.width / 2, y: $0.frame.height / 2) 
-        } ?? CGPoint(x: 960, y: 540)
+        // Center of the current screen/panel
+        let localScreenCenter = CGPoint(x: screenFrame.width / 2, y: screenFrame.height / 2)
         
         // Transform: translate to screen center, scale around cluster center
+        // We use global coordinates for the offset vector calculation, which is safe/correct
         let offsetFromCluster = CGPoint(
-            x: originalX - zoomCenter.x,
-            y: originalY - zoomCenter.y
+            x: globalX - zoomCenter.x,
+            y: globalY - zoomCenter.y
         )
         
         // Scale the offset and place at screen center
         return CGPoint(
-            x: screenCenter.x + offsetFromCluster.x * zoomScale,
-            y: screenCenter.y + offsetFromCluster.y * zoomScale
+            x: localScreenCenter.x + offsetFromCluster.x * zoomScale,
+            y: localScreenCenter.y + offsetFromCluster.y * zoomScale
         )
     }
     

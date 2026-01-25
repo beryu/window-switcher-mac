@@ -10,6 +10,7 @@ import SwiftUI
 struct ClusterLabelView: View {
     let cluster: ClusterModel
     let isSelected: Bool
+    var screenFrame: CGRect = .zero
     
     var body: some View {
         VStack(spacing: 2) {
@@ -45,8 +46,8 @@ struct ClusterLabelView: View {
             alignment: .center
         )
         .position(
-            x: cluster.center.x,
-            y: cluster.center.y
+            x: cluster.center.x - screenFrame.origin.x,
+            y: cluster.center.y - screenFrame.origin.y
         )
     }
 }

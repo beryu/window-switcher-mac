@@ -40,6 +40,8 @@ final class ViewModel: ObservableObject {
         case elementSelection  // Second phase: select element within cluster
     }
     
+
+    
     /// Minimum target size for zoom (ensure elements are spread enough)
     private static let minZoomedClusterSize: CGFloat = 400
     
@@ -56,8 +58,21 @@ final class ViewModel: ObservableObject {
         let targetScale = Self.minZoomedClusterSize / maxDim
         
         // Check screen bounds to prevent overflow
+        // Check screen bounds to prevent overflow
         // Use visible frame if possible, fallback to main screen
-        let screenSize = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1440, height: 900)
+        var screenSize = CGSize(width: 1440, height: 900)
+        
+        // Find screen containing the cluster center
+        let center = cluster.center
+        for screen in NSScreen.screens {
+            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
+                let bounds = CGDisplayBounds(id)
+                if bounds.contains(center) {
+                    screenSize = bounds.size
+                    break
+                }
+            }
+        }
         
         // Calculate max allowed scale such that:
         // dimension * scale <= screenSize * 0.9 (90% of screen)
@@ -240,31 +255,33 @@ final class ViewModel: ObservableObject {
                 }
             }
             
-        case .scrollTargetSelection:
-             // Similar to uiElement logic but transitions to scroll mode
-             if key == "\n" {
-                 if let element = uiElements.first(where: { $0.label == inputBuffer }) {
-                     let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
-                     transitionToScrollMode(targetCenter: center)
+            
+            
+            case .scrollTargetSelection:
+                 // Similar to uiElement logic but transitions to scroll mode
+                 if key == "\n" {
+                     if let element = uiElements.first(where: { $0.label == inputBuffer }) {
+                         let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
+                         transitionToScrollMode(targetCenter: center)
+                         return
+                     }
+                 }
+
+                 inputBuffer += key
+                 let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
+                 
+                 if matchingElements.isEmpty {
+                     inputBuffer = ""
                      return
                  }
-             }
-
-             inputBuffer += key
-             let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
-             
-             if matchingElements.isEmpty {
-                 inputBuffer = ""
-                 return
-             }
-             
-             if matchingElements.count == 1, matchingElements.first?.label == inputBuffer {
-                 if let element = matchingElements.first {
-                     // Target selected
-                     let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
-                     transitionToScrollMode(targetCenter: center)
+                 
+                 if matchingElements.count == 1, matchingElements.first?.label == inputBuffer {
+                     if let element = matchingElements.first {
+                         // Target selected
+                         let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
+                         transitionToScrollMode(targetCenter: center)
+                     }
                  }
-             }
              
         case .scroll:
             let scrollAmount: Int32 = 50
@@ -286,8 +303,9 @@ final class ViewModel: ObservableObject {
     func show() {
         checkPermission()
         
-        let contentView = OverlayContentView(viewModel: self)
-        overlayController.showOverlay(with: contentView)
+        overlayController.showOverlay { screenFrame in
+            OverlayContentView(viewModel: self, screenFrame: screenFrame)
+        }
         
         Task { @MainActor in
             focused = true
@@ -637,21 +655,43 @@ final class ViewModel: ObservableObject {
         }
         self.previouslyActiveApp = prevActiveApp
         
-        // Capture screenshot of the frontmost window BEFORE showing overlay
-        if let result = captureWindowScreenshot(pid: prevActiveApp.processIdentifier) {
-            windowScreenshot = result.image
-            windowFrame = result.frame
-        } else {
-            windowScreenshot = nil
-            windowFrame = .zero
-        }
-        
+        // Reset state
         mode = .uiElement
         uiElementSubMode = .clusterSelection
         inputBuffer = ""
         selectedCluster = nil
+        windowScreenshot = nil
+        windowFrame = .zero
+        
+        // Start screenshot capture asynchronously
+        // We do this immediately so it might be ready when user selects a cluster
+        let pid = prevActiveApp.processIdentifier
+        Task {
+            // Find window ID first (we need UIElementScanner to get the window ID from accessibility element)
+            // Or we can let ScreenRecorder find the main window for the app?
+            // Actually, best to get the ID from our scanner since we know which window is focused.
+            
+            // Get focused window frame and ID
+            if let windowInfo = uiElementScanner.getFocusedWindowInfo(pid: pid) {
+                let windowID = windowInfo.id
+                let frame = windowInfo.frame
+                
+                // Update frame immediately
+                await MainActor.run {
+                    self.windowFrame = frame
+                }
+                
+                // Capture
+                if let image = try? await ScreenRecorder.captureWindow(windowID: windowID) {
+                    await MainActor.run {
+                        self.windowScreenshot = image
+                    }
+                }
+            }
+        }
         
         // Scan all elements
+        // Note: This matches the "focused window" that we are capturing
         let allElements = uiElementScanner.scanFrontmostWindow()
         
         // Cluster elements
@@ -664,6 +704,7 @@ final class ViewModel: ObservableObject {
         show()
     }
     
+    /*
     /// Capture a screenshot of the specified application's focused window
     /// Returns the image and the window frame in screen coordinates
     private func captureWindowScreenshot(pid: pid_t) -> (image: NSImage, frame: CGRect)? {
@@ -713,6 +754,7 @@ final class ViewModel: ObservableObject {
         print("captureWindowScreenshot: Captured \(cgImage.width)x\(cgImage.height) image")
         return (nsImage, windowBounds)
     }
+    */
     
     private func clickUIElement(_ element: UIElementModel) {
         print("Clicking element: \(element.label) - \(element.displayName)")
