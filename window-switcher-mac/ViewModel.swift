@@ -125,15 +125,15 @@ final class ViewModel: ObservableObject {
             }
         }
         
-        // UI Element Mode: Option + Escape
-        uiElementHotKeyManager = GlobalHotKeyManager.optionEscape { [weak self] in
+        // UI Element Mode: Control + Option + Escape
+        uiElementHotKeyManager = GlobalHotKeyManager.controlOptionEscape { [weak self] in
              Task { @MainActor in
                  self?.startUIElementSelection()
              }
         }
         
-        // Scroll Mode: Control + Option + Escape
-        scrollHotKeyManager = GlobalHotKeyManager.controlOptionEscape { [weak self] in
+        // Scroll Mode: Option + Escape
+        scrollHotKeyManager = GlobalHotKeyManager.optionEscape { [weak self] in
             Task { @MainActor in
                 self?.startScrollMode()
             }
