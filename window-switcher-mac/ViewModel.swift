@@ -19,14 +19,46 @@ final class ViewModel: ObservableObject {
     @Published private(set) var appWindows: [AppWindow] = []
     private var allAppWindows: [AppWindow] = []
     @Published private(set) var uiElements: [UIElementModel] = []
+    @Published private(set) var clusters: [ClusterModel] = []
+    @Published private(set) var isolatedElements: [UIElementModel] = []
+    @Published var selectedCluster: ClusterModel? = nil
+    @Published var windowScreenshot: NSImage? = nil  // Screenshot of the target window
+    @Published var windowFrame: CGRect = .zero  // Frame of the target window in screen coordinates
     @Published var focused: Bool = false
     @Published var mode: Mode = .windowSwitcher
+    @Published var uiElementSubMode: UIElementSubMode = .clusterSelection
     
     enum Mode {
         case windowSwitcher
         case uiElement
         case scrollTargetSelection
         case scroll
+    }
+    
+    enum UIElementSubMode {
+        case clusterSelection  // First phase: select cluster or isolated element
+        case elementSelection  // Second phase: select element within cluster
+    }
+    
+    /// Minimum target size for zoom (ensure elements are spread enough)
+    private static let minZoomedClusterSize: CGFloat = 400
+    
+    /// Computed zoom scale for the selected cluster
+    var zoomScale: CGFloat {
+        guard let cluster = selectedCluster else { return 1.0 }
+        let clusterSize = max(cluster.boundingFrame.width, cluster.boundingFrame.height)
+        guard clusterSize > 0 else { return 1.0 }
+        
+        // Calculate scale to make the cluster fill at least minZoomedClusterSize
+        let targetScale = Self.minZoomedClusterSize / clusterSize
+        // Limit scale to reasonable range
+        return min(max(targetScale, 1.5), 5.0)
+    }
+    
+    /// Computed zoom center for the selected cluster
+    var zoomCenter: CGPoint {
+        guard let cluster = selectedCluster else { return .zero }
+        return cluster.center
     }
     
     var previouslyActiveApp: NSRunningApplication? = nil
@@ -130,32 +162,68 @@ final class ViewModel: ObservableObject {
             }
             
         case .uiElement:
-            if key == "\n" {
-                // Confirm selection if exact match exists
-                if let element = uiElements.first(where: { $0.label == inputBuffer }) {
+            switch uiElementSubMode {
+            case .clusterSelection:
+                // Phase 1: Select a cluster or isolated element
+                let upperKey = key.uppercased()
+                
+                // Check if key matches a cluster
+                if let cluster = clusters.first(where: { $0.label == upperKey }) {
+                    // Transition to element selection within this cluster
+                    selectedCluster = cluster
+                    uiElementSubMode = .elementSelection
+                    inputBuffer = ""
+                    
+                    // Re-assign labels to the cluster's elements
+                    var elementsToLabel = cluster.elements
+                    uiElementScanner.assignLabelsToElements(&elementsToLabel)
+                    uiElements = elementsToLabel
+                    return
+                }
+                
+                // Check if key matches an isolated element
+                let lowerKey = key.lowercased()
+                if let element = isolatedElements.first(where: { $0.label == lowerKey }) {
                     clickUIElement(element)
                     return
                 }
-            }
-            
-            // Append key to buffer
-            inputBuffer += key
-            
-            // Filter elements matching buffer
-            let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
-            
-            if matchingElements.isEmpty {
-                // No match
-                // Let's reset buffer if invalid sequence
-                inputBuffer = ""
-                return
-            }
-            
-            if matchingElements.count == 1, matchingElements.first?.label == inputBuffer {
-                // Exact match and unique
-                if let element = matchingElements.first {
-                    clickUIElement(element)
-                    // Note: hide() is called inside clickUIElement
+                
+                // Try prefix matching for isolated elements
+                inputBuffer += lowerKey
+                let matchingIsolated = isolatedElements.filter { $0.label.starts(with: inputBuffer) }
+                
+                if matchingIsolated.isEmpty {
+                    inputBuffer = ""
+                    return
+                }
+                
+                if matchingIsolated.count == 1, matchingIsolated.first?.label == inputBuffer {
+                    if let element = matchingIsolated.first {
+                        clickUIElement(element)
+                    }
+                }
+                
+            case .elementSelection:
+                // Phase 2: Select element within the selected cluster
+                if key == "\n" {
+                    if let element = uiElements.first(where: { $0.label == inputBuffer }) {
+                        clickUIElement(element)
+                        return
+                    }
+                }
+                
+                inputBuffer += key.lowercased()
+                let matchingElements = uiElements.filter { $0.label.starts(with: inputBuffer) }
+                
+                if matchingElements.isEmpty {
+                    inputBuffer = ""
+                    return
+                }
+                
+                if matchingElements.count == 1, matchingElements.first?.label == inputBuffer {
+                    if let element = matchingElements.first {
+                        clickUIElement(element)
+                    }
                 }
             }
             
@@ -241,6 +309,10 @@ final class ViewModel: ObservableObject {
         Task { @MainActor in
             appWindows = []
             uiElements = []
+            clusters = []
+            isolatedElements = []
+            selectedCluster = nil
+            uiElementSubMode = .clusterSelection
             inputBuffer = ""
             focused = false
         }
@@ -552,10 +624,81 @@ final class ViewModel: ObservableObject {
         }
         self.previouslyActiveApp = prevActiveApp
         
+        // Capture screenshot of the frontmost window BEFORE showing overlay
+        if let result = captureWindowScreenshot(pid: prevActiveApp.processIdentifier) {
+            windowScreenshot = result.image
+            windowFrame = result.frame
+        } else {
+            windowScreenshot = nil
+            windowFrame = .zero
+        }
+        
         mode = .uiElement
+        uiElementSubMode = .clusterSelection
         inputBuffer = ""
-        uiElements = uiElementScanner.scanFrontmostWindow()
+        selectedCluster = nil
+        
+        // Scan all elements
+        let allElements = uiElementScanner.scanFrontmostWindow()
+        
+        // Cluster elements
+        let (foundClusters, foundIsolated) = uiElementScanner.clusterElements(elements: allElements)
+        
+        clusters = foundClusters
+        isolatedElements = foundIsolated
+        uiElements = allElements  // Keep for reference
+        
         show()
+    }
+    
+    /// Capture a screenshot of the specified application's focused window
+    /// Returns the image and the window frame in screen coordinates
+    private func captureWindowScreenshot(pid: pid_t) -> (image: NSImage, frame: CGRect)? {
+        // Get window list for the specified process
+        let options = CGWindowListOption([.optionOnScreenOnly, .excludeDesktopElements])
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        
+        // Find windows belonging to the target process
+        let targetWindows = windowList.filter { info in
+            guard let windowPID = info[kCGWindowOwnerPID as String] as? Int32 else { return false }
+            return windowPID == pid
+        }
+        
+        // Get the frontmost window (first in the list for this app)
+        guard let windowInfo = targetWindows.first,
+              let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID else {
+            print("captureWindowScreenshot: No window found for pid \(pid)")
+            return nil
+        }
+        
+        // Get window bounds (in screen coordinates with top-left origin)
+        var windowBounds: CGRect = .zero
+        if let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: Any],
+           let x = boundsDict["X"] as? CGFloat,
+           let y = boundsDict["Y"] as? CGFloat,
+           let width = boundsDict["Width"] as? CGFloat,
+           let height = boundsDict["Height"] as? CGFloat {
+            // CGWindowBounds uses top-left origin
+            windowBounds = CGRect(x: x, y: y, width: width, height: height)
+            print("captureWindowScreenshot: Window bounds (CG top-left): \(windowBounds)")
+        }
+        
+        // Capture the window image
+        guard let cgImage = CGWindowListCreateImage(
+            .null,
+            .optionIncludingWindow,
+            windowID,
+            [.boundsIgnoreFraming, .bestResolution]
+        ) else {
+            print("captureWindowScreenshot: Failed to capture window image")
+            return nil
+        }
+        
+        let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        print("captureWindowScreenshot: Captured \(cgImage.width)x\(cgImage.height) image")
+        return (nsImage, windowBounds)
     }
     
     private func clickUIElement(_ element: UIElementModel) {

@@ -106,6 +106,114 @@ final class UIElementScanner {
         }
     }
     
+    /// Public method to assign labels to elements (for use when reassigning within a cluster)
+    func assignLabelsToElements(_ elements: inout [UIElementModel]) {
+        assignLabels(to: &elements)
+    }
+    
+    // MARK: - Clustering
+    
+    /// Threshold distance for considering elements as part of the same cluster
+    private static let clusterThreshold: CGFloat = 50.0
+    
+    /// Minimum number of elements to form a cluster (otherwise show individually)
+    private static let minClusterSize: Int = 3
+    
+    /// Cluster elements based on proximity
+    /// - Parameters:
+    ///   - elements: Array of UI elements to cluster
+    /// - Returns: Tuple of (clusters, isolatedElements)
+    func clusterElements(elements: [UIElementModel]) -> (clusters: [ClusterModel], isolated: [UIElementModel]) {
+        guard !elements.isEmpty else {
+            return ([], [])
+        }
+        
+        // Use Union-Find algorithm for clustering
+        var parent = Array(0..<elements.count)
+        
+        func find(_ x: Int) -> Int {
+            if parent[x] != x {
+                parent[x] = find(parent[x])
+            }
+            return parent[x]
+        }
+        
+        func union(_ x: Int, _ y: Int) {
+            let px = find(x)
+            let py = find(y)
+            if px != py {
+                parent[px] = py
+            }
+        }
+        
+        // Check all pairs for proximity
+        for i in 0..<elements.count {
+            for j in (i+1)..<elements.count {
+                if areElementsNearby(elements[i], elements[j]) {
+                    union(i, j)
+                }
+            }
+        }
+        
+        // Group elements by their root parent
+        var groups: [Int: [Int]] = [:]
+        for i in 0..<elements.count {
+            let root = find(i)
+            groups[root, default: []].append(i)
+        }
+        
+        // Separate clusters from isolated elements
+        var clusters: [ClusterModel] = []
+        var isolated: [UIElementModel] = []
+        
+        for (_, indices) in groups {
+            if indices.count >= Self.minClusterSize {
+                // This is a cluster
+                let clusterElements = indices.map { elements[$0] }
+                let cluster = ClusterModel(
+                    id: UUID(),
+                    elements: clusterElements,
+                    label: ""  // Will be assigned later
+                )
+                clusters.append(cluster)
+            } else {
+                // These are isolated elements
+                for index in indices {
+                    isolated.append(elements[index])
+                }
+            }
+        }
+        
+        // Assign labels to clusters
+        assignClusterLabels(to: &clusters)
+        
+        // Assign labels to isolated elements
+        assignLabels(to: &isolated)
+        
+        print("UIElementScanner: Created \(clusters.count) clusters and \(isolated.count) isolated elements")
+        return (clusters, isolated)
+    }
+    
+    /// Check if two elements are nearby (within threshold distance)
+    private func areElementsNearby(_ a: UIElementModel, _ b: UIElementModel) -> Bool {
+        // Expand frames slightly for overlap detection
+        let expandedA = a.frame.insetBy(dx: -Self.clusterThreshold / 2, dy: -Self.clusterThreshold / 2)
+        let expandedB = b.frame.insetBy(dx: -Self.clusterThreshold / 2, dy: -Self.clusterThreshold / 2)
+        return expandedA.intersects(expandedB)
+    }
+    
+    /// Assign keyboard labels to clusters
+    private func assignClusterLabels(to clusters: inout [ClusterModel]) {
+        let chars = Self.labelCharacters
+        for (index, _) in clusters.enumerated() {
+            if index < chars.count {
+                clusters[index].label = String(chars[index]).uppercased()
+            } else {
+                clusters[index].label = "\(index + 1)"
+            }
+        }
+    }
+    
     /// Scan the frontmost application's window for scrollable elements
     func scanScrollableElements(maxElements: Int = 26) -> [UIElementModel] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return [] }

@@ -13,6 +13,9 @@
 		88E6797D2F257DCA0037E4E2 /* UIElementModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E6797B2F257DCA0037E4E2 /* UIElementModel.swift */; };
 		88E679802F257DD40037E4E2 /* UIElementScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E6797E2F257DD40037E4E2 /* UIElementScanner.swift */; };
 		88E679832F257FD30037E4E2 /* UIElementLabelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679812F257FD30037E4E2 /* UIElementLabelView.swift */; };
+		88E679852F265B070037E4E2 /* ClusterModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679842F265B070037E4E2 /* ClusterModel.swift */; };
+		88E679872F265B120037E4E2 /* ClusterLabelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679862F265B120037E4E2 /* ClusterLabelView.swift */; };
+		88E679892F265DB10037E4E2 /* ZoomedScreenshotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679882F265DB10037E4E2 /* ZoomedScreenshotView.swift */; };
 		B13766E42BB54CCA002822E1 /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13766E32BB54CCA002822E1 /* ViewModel.swift */; };
 		B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */; };
 		B180F7212BB007CF0017A08D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B180F7202BB007CF0017A08D /* ContentView.swift */; };
@@ -47,6 +50,9 @@
 		88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanelController.swift; sourceTree = "<group>"; };
 		88E6797E2F257DD40037E4E2 /* UIElementScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIElementScanner.swift; sourceTree = "<group>"; };
 		88E679812F257FD30037E4E2 /* UIElementLabelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIElementLabelView.swift; sourceTree = "<group>"; };
+		88E679842F265B070037E4E2 /* ClusterModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClusterModel.swift; sourceTree = "<group>"; };
+		88E679862F265B120037E4E2 /* ClusterLabelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClusterLabelView.swift; sourceTree = "<group>"; };
+		88E679882F265DB10037E4E2 /* ZoomedScreenshotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomedScreenshotView.swift; sourceTree = "<group>"; };
 		B13766E32BB54CCA002822E1 /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
 		B180F71B2BB007CF0017A08D /* window-switcher-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "window-switcher-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B180F71E2BB007CF0017A08D /* WindowSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitcherApp.swift; sourceTree = "<group>"; };
@@ -97,6 +103,7 @@
 		88E6797C2F257DCA0037E4E2 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				88E679842F265B070037E4E2 /* ClusterModel.swift */,
 				88E6797B2F257DCA0037E4E2 /* UIElementModel.swift */,
 			);
 			path = Models;
@@ -113,7 +120,9 @@
 		88E679822F257FD30037E4E2 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				88E679862F265B120037E4E2 /* ClusterLabelView.swift */,
 				88E679812F257FD30037E4E2 /* UIElementLabelView.swift */,
+				88E679882F265DB10037E4E2 /* ZoomedScreenshotView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -316,11 +325,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				88E679892F265DB10037E4E2 /* ZoomedScreenshotView.swift in Sources */,
+				88E679852F265B070037E4E2 /* ClusterModel.swift in Sources */,
 				88E679832F257FD30037E4E2 /* UIElementLabelView.swift in Sources */,
 				B180F7212BB007CF0017A08D /* ContentView.swift in Sources */,
 				88E6797D2F257DCA0037E4E2 /* UIElementModel.swift in Sources */,
 				B180F71F2BB007CF0017A08D /* WindowSwitcherApp.swift in Sources */,
 				88E679802F257DD40037E4E2 /* UIElementScanner.swift in Sources */,
+				88E679872F265B120037E4E2 /* ClusterLabelView.swift in Sources */,
 				B13766E42BB54CCA002822E1 /* ViewModel.swift in Sources */,
 				88E6797A2F25691C0037E4E2 /* GlobalHotKeyManager.swift in Sources */,
 				88E6797B2F25691C0037E4E2 /* OverlayPanelController.swift in Sources */,

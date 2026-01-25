@@ -43,11 +43,71 @@ struct OverlayContentView: View {
                     )
                 }
             } else if viewModel.mode == .uiElement || viewModel.mode == .scrollTargetSelection {
-                // UI Element labels
-                ForEach(viewModel.uiElements) { element in
-                    let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
-                    UIElementLabelView(element: element)
+                // UI Element labels with clustering support
+                if viewModel.uiElementSubMode == .clusterSelection {
+                    // Phase 1: Show clusters and isolated elements
+                    
+                    // Display clusters
+                    ForEach(viewModel.clusters) { cluster in
+                        ClusterLabelView(
+                            cluster: cluster,
+                            isSelected: false
+                        )
+                    }
+                    
+                    // Display isolated elements
+                    ForEach(viewModel.isolatedElements) { element in
+                        let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
+                        UIElementLabelView(element: element)
+                            .opacity(isMatch ? 1.0 : 0.1)
+                    }
+                } else {
+                    // Phase 2: Show elements within selected cluster (ZOOMED IN)
+                    
+                    // Dark overlay background
+                    Color.black.opacity(0.85)
+                        .ignoresSafeArea()
+                    
+                    // Display zoomed screenshot of the cluster area
+                    if let screenshot = viewModel.windowScreenshot,
+                       let selectedCluster = viewModel.selectedCluster {
+                        ZoomedScreenshotView(
+                            screenshot: screenshot,
+                            cluster: selectedCluster,
+                            zoomScale: viewModel.zoomScale,
+                            windowFrame: viewModel.windowFrame
+                        )
+                    }
+                    
+                    // Zoomed cluster info at top
+                    VStack {
+                        if let selectedCluster = viewModel.selectedCluster {
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                Text("Cluster \(selectedCluster.label) - \(selectedCluster.count) elements")
+                                Text("(\(String(format: "%.1f", viewModel.zoomScale))x)")
+                                    .foregroundStyle(.gray)
+                            }
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(12)
+                            .background(Color.black.opacity(0.8))
+                            .cornerRadius(8)
+                        }
+                        Spacer()
+                    }
+                    .padding(.top, 40)
+                    
+                    // Show elements in the selected cluster with zoom
+                    ForEach(viewModel.uiElements) { element in
+                        let isMatch = viewModel.inputBuffer.isEmpty || element.label.starts(with: viewModel.inputBuffer)
+                        UIElementLabelView(
+                            element: element,
+                            zoomScale: viewModel.zoomScale,
+                            zoomCenter: viewModel.zoomCenter
+                        )
                         .opacity(isMatch ? 1.0 : 0.1)
+                    }
                 }
             } else if viewModel.mode == .scroll {
                 // Scroll Mode Indicator
