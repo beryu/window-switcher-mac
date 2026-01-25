@@ -114,18 +114,40 @@ extension AXUIElement {
       "AXImage",  // Sometimes clickable
       "AXStaticText",  // Sometimes clickable (links in text)
       "AXCell",  // Table cells
+      "AXGroup",  // Groups can be clickable in some apps
+      "AXSplitGroup",
+      "AXLayoutArea",
+      "AXLayoutItem",
+      "AXHandle",  // Draggable handles
+      "AXColorWell",
+      "AXSlider",
+      "AXStepper",
+      "AXSegmentedControl",
     ]
     
     if clickableRoles.contains(role) {
       return true
     }
     
-    // Check if element has AXPress action
-    var actions: AnyObject?
-    let result = AXUIElementCopyAttributeValue(self, "AXActions" as CFString, &actions)
-    if result == .success, let actionList = actions as? [String] {
-      if actionList.contains("AXPress") || actionList.contains("AXOpen") {
-        return true
+    // Check if element has actions that indicate it's clickable
+    // Use AXUIElementCopyActionNames for proper action enumeration
+    var actionNames: CFArray?
+    let result = AXUIElementCopyActionNames(self, &actionNames)
+    if result == .success, let actions = actionNames as? [String] {
+      let clickableActions: Set<String> = [
+        "AXPress",
+        "AXOpen",
+        "AXShowMenu",
+        "AXPick",
+        "AXCancel",
+        "AXConfirm",
+        "AXIncrement",
+        "AXDecrement",
+      ]
+      for action in actions {
+        if clickableActions.contains(action) {
+          return true
+        }
       }
     }
     

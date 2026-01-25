@@ -46,13 +46,29 @@ final class ViewModel: ObservableObject {
     /// Computed zoom scale for the selected cluster
     var zoomScale: CGFloat {
         guard let cluster = selectedCluster else { return 1.0 }
-        let clusterSize = max(cluster.boundingFrame.width, cluster.boundingFrame.height)
-        guard clusterSize > 0 else { return 1.0 }
+        let clusterWidth = cluster.boundingFrame.width
+        let clusterHeight = cluster.boundingFrame.height
         
-        // Calculate scale to make the cluster fill at least minZoomedClusterSize
-        let targetScale = Self.minZoomedClusterSize / clusterSize
-        // Limit scale to reasonable range
-        return min(max(targetScale, 1.5), 5.0)
+        guard clusterWidth > 0, clusterHeight > 0 else { return 1.0 }
+        
+        // Base scale calculation
+        let maxDim = max(clusterWidth, clusterHeight)
+        let targetScale = Self.minZoomedClusterSize / maxDim
+        
+        // Check screen bounds to prevent overflow
+        // Use visible frame if possible, fallback to main screen
+        let screenSize = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1440, height: 900)
+        
+        // Calculate max allowed scale such that:
+        // dimension * scale <= screenSize * 0.9 (90% of screen)
+        let maxScaleX = (screenSize.width * 0.9) / clusterWidth
+        let maxScaleY = (screenSize.height * 0.9) / clusterHeight
+        let maxAllowedScale = min(maxScaleX, maxScaleY)
+        
+        // Final scale: at least 1.5x, up to 5.0x, but capped by screen fit
+        let finalScale = min(max(targetScale, 1.5), 5.0)
+        
+        return min(finalScale, maxAllowedScale)
     }
     
     /// Computed zoom center for the selected cluster
@@ -182,11 +198,8 @@ final class ViewModel: ObservableObject {
                 }
                 
                 // Check if key matches an isolated element
+                // Instead of immediate match, append to buffer and check uniqueness
                 let lowerKey = key.lowercased()
-                if let element = isolatedElements.first(where: { $0.label == lowerKey }) {
-                    clickUIElement(element)
-                    return
-                }
                 
                 // Try prefix matching for isolated elements
                 inputBuffer += lowerKey

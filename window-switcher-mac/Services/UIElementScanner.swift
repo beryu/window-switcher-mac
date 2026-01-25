@@ -131,6 +131,9 @@ final class UIElementScanner {
         // Use Union-Find algorithm for clustering
         var parent = Array(0..<elements.count)
         
+        // Maximum dimension for a cluster (e.g. 500px) to prevent whole-window clusters
+        let maxClusterDimension: CGFloat = 500.0
+        
         func find(_ x: Int) -> Int {
             if parent[x] != x {
                 parent[x] = find(parent[x])
@@ -142,6 +145,18 @@ final class UIElementScanner {
             let px = find(x)
             let py = find(y)
             if px != py {
+                // Check if merging would create a cluster too large
+                // We need to track the bounding box of each group to do this efficiently
+                // For now, simpler heuristic: don't merge if distant
+                
+                // Get bounds of both groups? 
+                // Since 'parent' doesn't store bounds, we'd need a separate structure.
+                // Let's rely on a simpler check: areElementsNearby is already local.
+                // But transitively A-B-C-D can span a huge area.
+                
+                // We'll proceed with union, but later split large clusters? 
+                // Or better: check combined bounds here.
+                // Since this is O(N^2) anyway, let's keep it simple for now.
                 parent[px] = py
             }
         }
@@ -166,16 +181,57 @@ final class UIElementScanner {
         var clusters: [ClusterModel] = []
         var isolated: [UIElementModel] = []
         
+        // Max dimensions for a cluster to stay grouped
+        let maxClusterSize: CGFloat = 800.0
+        
         for (_, indices) in groups {
             if indices.count >= Self.minClusterSize {
-                // This is a cluster
+                // Potential cluster
                 let clusterElements = indices.map { elements[$0] }
-                let cluster = ClusterModel(
-                    id: UUID(),
-                    elements: clusterElements,
-                    label: ""  // Will be assigned later
-                )
-                clusters.append(cluster)
+                
+                // Calculate bounds
+                var minX = CGFloat.infinity, minY = CGFloat.infinity
+                var maxX = -CGFloat.infinity, maxY = -CGFloat.infinity
+                
+                for el in clusterElements {
+                    minX = min(minX, el.frame.minX)
+                    minY = min(minY, el.frame.minY)
+                    maxX = max(maxX, el.frame.maxX)
+                    maxY = max(maxY, el.frame.maxY)
+                }
+                
+                let width = maxX - minX
+                let height = maxY - minY
+                
+                // Check if cluster is too large
+                if width > maxClusterSize || height > maxClusterSize {
+                    print("UIElementScanner: Cluster too large (\(width)x\(height)), subdividing...")
+                    
+                    // Initial region is the bounding box of the cluster
+                    let initialRegion = CGRect(x: minX, y: minY, width: width, height: height)
+                    
+                    // Recursively subdivide the cluster
+                    let subClusters = subdivideCluster(elements: clusterElements, region: initialRegion, maxDimension: maxClusterSize)
+                    print("UIElementScanner: Subdivided into \(subClusters.count) clusters")
+                    
+                    for (subElements, subBounds) in subClusters {
+                        let cluster = ClusterModel(
+                            id: UUID(),
+                            elements: subElements,
+                            label: "",
+                            customBounds: subBounds
+                        )
+                        clusters.append(cluster)
+                    }
+                } else {
+                    // Valid cluster
+                    let cluster = ClusterModel(
+                        id: UUID(),
+                        elements: clusterElements,
+                        label: ""  // Will be assigned later
+                    )
+                    clusters.append(cluster)
+                }
             } else {
                 // These are isolated elements
                 for index in indices {
@@ -192,6 +248,77 @@ final class UIElementScanner {
         
         print("UIElementScanner: Created \(clusters.count) clusters and \(isolated.count) isolated elements")
         return (clusters, isolated)
+    }
+    
+    /// Recursively subdivide a group of elements using geometric partitioning
+    /// Returns list of tuples containing elements and their assigned geometric region
+    private func subdivideCluster(elements: [UIElementModel], region: CGRect, maxDimension: CGFloat) -> [(elements: [UIElementModel], bounds: CGRect)] {
+        guard !elements.isEmpty else { return [] }
+        
+        let width = region.width
+        let height = region.height
+        
+        // If the current region fits within the limit, return as one cluster with this region
+        if width <= maxDimension && height <= maxDimension {
+            return [(elements, region)]
+        }
+        
+        // Split geometric space into two halves
+        var group1: [UIElementModel] = []
+        var group2: [UIElementModel] = []
+        var region1: CGRect
+        var region2: CGRect
+        
+        // Determine split axis and pivot
+        if width > height {
+            // Split vertically
+            let pivotX = region.minX + width / 2.0
+            region1 = CGRect(x: region.minX, y: region.minY, width: width / 2.0, height: height)
+            region2 = CGRect(x: pivotX, y: region.minY, width: width / 2.0, height: height) // Remainder width
+            
+            for el in elements {
+                if el.frame.midX < pivotX {
+                    group1.append(el)
+                } else {
+                    group2.append(el)
+                }
+            }
+        } else {
+            // Split horizontally
+            let pivotY = region.minY + height / 2.0
+            region1 = CGRect(x: region.minX, y: region.minY, width: width, height: height / 2.0)
+            region2 = CGRect(x: region.minX, y: pivotY, width: width, height: height / 2.0) // Remainder height
+            
+            for el in elements {
+                if el.frame.midY < pivotY {
+                    group1.append(el)
+                } else {
+                    group2.append(el)
+                }
+            }
+        }
+        
+        // Handle empty groups: if a split results in an empty group, allow the non-empty one to take its region
+        // But we still need to recurse if it's too big.
+        // Actually, if we force the region to match the split, we guarantee non-overlap.
+        // If group1 is empty, we just don't return a cluster for region1.
+        
+        var results: [(elements: [UIElementModel], bounds: CGRect)] = []
+        
+        if !group1.isEmpty {
+            results.append(contentsOf: subdivideCluster(elements: group1, region: region1, maxDimension: maxDimension))
+        }
+        if !group2.isEmpty {
+            results.append(contentsOf: subdivideCluster(elements: group2, region: region2, maxDimension: maxDimension))
+        }
+        
+        // Fallback: If for some reason we lost elements (shouldn't happen), or both empty
+        if results.isEmpty && !elements.isEmpty {
+            // This case implies logic error or strange state, fallback to returning current region
+            return [(elements, region)]
+        }
+        
+        return results
     }
     
     /// Check if two elements are nearby (within threshold distance)

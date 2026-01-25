@@ -12,9 +12,14 @@ struct ClusterModel: Identifiable {
     let id: UUID
     var elements: [UIElementModel]
     var label: String  // Keyboard shortcut label for selecting this cluster
+    var customBounds: CGRect? = nil // Optional override for the bounding frame
     
     /// The bounding rectangle that contains all elements in this cluster
     var boundingFrame: CGRect {
+        if let custom = customBounds {
+            return custom
+        }
+        
         guard let first = elements.first else {
             return .zero
         }
