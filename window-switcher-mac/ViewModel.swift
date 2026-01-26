@@ -401,6 +401,8 @@ final class ViewModel: ObservableObject {
                 
                 guard
                     owner != "window-switcher-mac",
+                    // Exclude macOS widgets (Notification Center)
+                    owner != "Notification Center",
                     let position = element.getOrigin(),
                     let size = element.getSize(),
                     // Filter out windows that are too small to be real windows
