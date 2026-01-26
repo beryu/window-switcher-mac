@@ -183,16 +183,29 @@ extension AXUIElement {
     return true
   }
   
-  /// Check if element is visible (has non-zero size and is on screen)
+  /// Check if element is visible (has non-zero size and is on any screen)
   func isVisible() -> Bool {
     guard let frame = getFrame() else { return false }
     // Check if element has non-zero size
     if frame.width <= 0 || frame.height <= 0 {
       return false
     }
-    // Check if element is within screen bounds
-    guard let screenFrame = NSScreen.main?.frame else { return true }
-    return frame.intersects(screenFrame)
+    // Check if element is within any screen bounds (multi-display support)
+    let screens = NSScreen.screens
+    if screens.isEmpty { return true }
+    return screens.contains { screen in
+      frame.intersects(screen.frame)
+    }
+  }
+  
+  /// Check if window is minimized (in Dock)
+  func isMinimized() -> Bool {
+    var value: AnyObject?
+    let result = AXUIElementCopyAttributeValue(self, kAXMinimizedAttribute as CFString, &value)
+    if result == .success, let minimized = value as? Bool {
+      return minimized
+    }
+    return false
   }
   /// Check if this element is potentially scrollable
   func isScrollable() -> Bool {

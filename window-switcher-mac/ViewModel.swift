@@ -402,13 +402,24 @@ final class ViewModel: ObservableObject {
                 guard
                     owner != "window-switcher-mac",
                     let position = element.getOrigin(),
-                    let size = element.getSize()
+                    let size = element.getSize(),
+                    // Filter out windows that are too small to be real windows
+                    size.width >= 50,
+                    size.height >= 50,
+                    // Ensure window is visible on screen
+                    element.isVisible(),
+                    // Exclude minimized windows (in Dock)
+                    !element.isMinimized()
                 else {
                     continue
                 }
-                if owner == "Finder" && size == NSScreen.main?.frame.size {
-                    // Don't include Finder which don't has window
-                    continue
+                // Exclude Finder's desktop window (larger than any single screen)
+                if owner == "Finder" {
+                    let maxScreenSize = NSScreen.screens.map { $0.frame.size }.max(by: { $0.width * $0.height < $1.width * $1.height })
+                    if let maxSize = maxScreenSize,
+                       size.width >= maxSize.width || size.height >= maxSize.height {
+                        continue
+                    }
                 }
                 newAppWindows.append(.init(
                     uuid: UUID(),
