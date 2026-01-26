@@ -419,7 +419,7 @@ final class ViewModel: ObservableObject {
                         size: CGSize(width: 150, height: 150)
                     ),
                     name: owner,
-                    matchableName: owner.lowercased(),
+                    matchableName: owner.lowercased().replacingOccurrences(of: " ", with: ""),
                     key: "", // will be assigned
                     image: iconImage
                 ))
