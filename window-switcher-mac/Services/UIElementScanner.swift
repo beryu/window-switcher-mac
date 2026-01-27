@@ -205,9 +205,6 @@ final class UIElementScanner {
         // Use Union-Find algorithm for clustering
         var parent = Array(0..<elements.count)
         
-        // Maximum dimension for a cluster (e.g. 500px) to prevent whole-window clusters
-        let maxClusterDimension: CGFloat = 500.0
-        
         func find(_ x: Int) -> Int {
             if parent[x] != x {
                 parent[x] = find(parent[x])
