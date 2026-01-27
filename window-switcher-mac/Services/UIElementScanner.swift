@@ -135,33 +135,51 @@ final class UIElementScanner {
             return []
         }
         
-        let axWindow = windowElement as! AXUIElement
-        
-        // Recursively find all elements with text
-        var elements: [UIElementModel] = []
-        scanTextElement(axWindow, into: &elements, maxElements: maxElements)
+        // Recursively find all elements with text using tree-based deduplication
+        // (Children take precedence over parents)
+        var limit = maxElements
+        let elements = scanTextElement(windowElement as! AXUIElement, limit: &limit)
         
         print("UIElementScanner: Found \(elements.count) text elements")
         return elements
     }
     
     /// Recursively scan for elements with text content (including non-clickable elements)
-    private func scanTextElement(_ element: AXUIElement, into elements: inout [UIElementModel], maxElements: Int, depth: Int = 0) {
-        guard depth < 20 else { return }
-        guard elements.count < maxElements else { return }
+    /// Returns a list of candidate elements from this subtree.
+    /// If children return candidates, the current element is excluded (tree-based deduplication).
+    private func scanTextElement(_ element: AXUIElement, limit: inout Int, depth: Int = 0) -> [UIElementModel] {
+        guard depth < 20 else { return [] }
+        guard limit > 0 else { return [] }
         
-        // Check if element is visible and enabled
-        guard element.isVisible() && element.isEnabled() else { return }
+        // Check if element is visible
+        // We still traverse disabled elements because they might contain enabled children (e.g. AXList)
+        guard element.isVisible() else { return [] }
         
-        // Get text content (getTitle already includes value and description fallbacks)
+        var childResults: [UIElementModel] = []
+        
+        // Recursively scan children first
+        if let children = element.getChildren() {
+            for child in children {
+                if limit <= 0 { break }
+                let results = scanTextElement(child, limit: &limit, depth: depth + 1)
+                childResults.append(contentsOf: results)
+            }
+        }
+        
+        // If children provided candidates, we return those and ignore the current element (Deduplication)
+        if !childResults.isEmpty {
+            return childResults
+        }
+        
+        // If no children candidates, check if current element is a valid candidate
+        let isEnabled = element.isEnabled()
         let textContent = element.getTitle()
         
-        // Only include elements with non-empty text
-        if let text = textContent, !text.isEmpty {
-                // Prefer precise text frame, fallback to element frame
-                let frame = element.getTextFrame(for: text) ?? element.getFrame()
-                
-                if let frame = frame, let role = element.getRole() {
+        if isEnabled, let text = textContent, !text.isEmpty {
+            // Prefer precise text frame, fallback to element frame
+            let frame = element.getTextFrame(for: text) ?? element.getFrame()
+            
+            if let frame = frame, let role = element.getRole() {
                 // Filter out very small or invisible elements
                 if frame.width > 5 && frame.height > 5 {
                     let uiElement = UIElementModel(
@@ -172,17 +190,13 @@ final class UIElementScanner {
                         title: text,
                         label: ""  // Not used for text search
                     )
-                    elements.append(uiElement)
+                    limit -= 1
+                    return [uiElement]
                 }
             }
         }
         
-        // Recursively scan children
-        if let children = element.getChildren() {
-            for child in children {
-                scanTextElement(child, into: &elements, maxElements: maxElements, depth: depth + 1)
-            }
-        }
+        return []
     }
     
     // MARK: - Clustering
