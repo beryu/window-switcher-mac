@@ -1,6 +1,12 @@
 import AppKit
 import SwiftUI
 
+/// NSPanel subclass that can become key window for text input
+class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 /// Manages NSPanel overlays that display above all windows on all screens
 final class OverlayPanelController {
     private var panels: [NSPanel] = []
@@ -85,7 +91,7 @@ final class OverlayPanelController {
     }
     
     private func createPanel(for screen: NSScreen) -> NSPanel {
-        let panel = NSPanel(
+        let panel = KeyablePanel(
             contentRect: screen.frame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -100,7 +106,7 @@ final class OverlayPanelController {
         panel.hasShadow = false
         
         // Panel-specific behavior
-        panel.becomesKeyOnlyIfNeeded = true
+        panel.becomesKeyOnlyIfNeeded = false  // Allow becoming key window
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = true
         
@@ -108,6 +114,20 @@ final class OverlayPanelController {
         panel.ignoresMouseEvents = false
         
         return panel
+    }
+    
+    /// Make the first panel key window (for TextField input)
+    func makeKeyWindow() {
+        if let panel = panels.first {
+            // Activate the app first, then make panel key
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            
+            // Make the hosting view first responder so TextField can receive input
+            if let hostingView = hostingViews[panel] {
+                panel.makeFirstResponder(hostingView)
+            }
+        }
     }
     
     private func getAXFrame(for screen: NSScreen) -> CGRect {

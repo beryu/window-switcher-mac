@@ -33,6 +33,7 @@ final class ViewModel: ObservableObject {
         case uiElement
         case scrollTargetSelection
         case scroll
+        case textSearch
     }
     
     enum UIElementSubMode {
@@ -102,6 +103,13 @@ final class ViewModel: ObservableObject {
     nonisolated(unsafe) private var hotKeyManager: GlobalHotKeyManager?
     nonisolated(unsafe) private var uiElementHotKeyManager: GlobalHotKeyManager?
     nonisolated(unsafe) private var scrollHotKeyManager: GlobalHotKeyManager?
+    nonisolated(unsafe) private var textSearchHotKeyManager: GlobalHotKeyManager?
+    
+    /// All text elements scanned for text search mode
+    private var allTextElements: [UIElementModel] = []
+    
+    /// Text search window controller (Spotlight-style)
+    private let textSearchWindowController = TextSearchWindowController()
     
 
     
@@ -139,6 +147,13 @@ final class ViewModel: ObservableObject {
             }
         }
         
+        // Text Search Mode: Control + /
+        textSearchHotKeyManager = GlobalHotKeyManager.controlSlash { [weak self] in
+            Task { @MainActor in
+                self?.startTextSearchMode()
+            }
+        }
+        
         if hotKeyManager == nil {
             print("Warning: Failed to register global hotkey Control+Escape")
         }
@@ -147,6 +162,9 @@ final class ViewModel: ObservableObject {
         }
         if scrollHotKeyManager == nil {
             print("Warning: Failed to register global hotkey Control+Option+Escape")
+        }
+        if textSearchHotKeyManager == nil {
+            print("Warning: Failed to register global hotkey Control+/")
         }
     }
     
@@ -157,6 +175,15 @@ final class ViewModel: ObservableObject {
     }
     
     @Published var inputBuffer: String = ""
+    
+    /// Text search query (for TextField binding with IME support)
+    @Published var textSearchQuery: String = "" {
+        didSet {
+            if mode == .textSearch {
+                filterTextElementsByQuery()
+            }
+        }
+    }
     
     /// Handle key press from global key capture
     func handleGlobalKeyPress(_ key: String) {
@@ -297,10 +324,37 @@ final class ViewModel: ObservableObject {
             default:
                 break
             }
+            
+        case .textSearch:
+            // Handle backspace (delete key)
+            if key == "\u{7F}" || key == "\u{08}" {
+                if !inputBuffer.isEmpty {
+                    inputBuffer.removeLast()
+                    filterTextElements()
+                }
+                return
+            }
+            
+            // Handle Enter key to click first match
+            if key == "\n" {
+                if let firstMatch = uiElements.first {
+                    clickTextElement(firstMatch)
+                }
+                return
+            }
+            
+            // Append character to search buffer
+            inputBuffer += key.lowercased()
+            filterTextElements()
+            
+            // Auto-click if exactly one match
+            if uiElements.count == 1 {
+                clickTextElement(uiElements[0])
+            }
         }
     }
     
-    func show() {
+    func show(enableKeyCapture: Bool = true) {
         checkPermission()
         
         overlayController.showOverlay { screenFrame in
@@ -311,19 +365,21 @@ final class ViewModel: ObservableObject {
             focused = true
         }
         
-        // Enable global key capture during overlay display
-        hotKeyManager?.enableOverlayMode(
-            keyHandler: { [weak self] key in
-                Task { @MainActor in
-                    self?.handleGlobalKeyPress(key)
+        // Enable global key capture during overlay display if requested
+        if enableKeyCapture {
+            hotKeyManager?.enableOverlayMode(
+                keyHandler: { [weak self] key in
+                    Task { @MainActor in
+                        self?.handleGlobalKeyPress(key)
+                    }
+                },
+                escapeHandler: { [weak self] in
+                    Task { @MainActor in
+                        self?.hide()
+                    }
                 }
-            },
-            escapeHandler: { [weak self] in
-                Task { @MainActor in
-                    self?.hide()
-                }
-            }
-        )
+            )
+        }
         
         // Configure overlay interaction based on mode
         if mode == .scroll {
@@ -340,11 +396,13 @@ final class ViewModel: ObservableObject {
         Task { @MainActor in
             appWindows = []
             uiElements = []
+            allTextElements = []
             clusters = []
             isolatedElements = []
             selectedCluster = nil
             uiElementSubMode = .clusterSelection
             inputBuffer = ""
+            textSearchQuery = ""
             focused = false
         }
         overlayController.hideOverlay()
@@ -356,6 +414,142 @@ final class ViewModel: ObservableObject {
              prev.activate()
         }
         previouslyActiveApp = nil
+    }
+    
+    // MARK: - Text Search Mode
+    
+    func startTextSearchMode() {
+        print("TextSearch: startTextSearchMode called")
+        
+        guard let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
+            $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
+        }) else {
+            print("TextSearch: No active app found (excluding self)")
+            // Try to get frontmost app as fallback
+            if let frontmost = NSWorkspace.shared.frontmostApplication {
+                print("TextSearch: Frontmost app is: \(frontmost.localizedName ?? "unknown") - bundle: \(frontmost.bundleIdentifier ?? "nil")")
+            }
+            return
+        }
+        self.previouslyActiveApp = prevActiveApp
+        print("TextSearch: Previous active app: \(prevActiveApp.localizedName ?? "unknown")")
+        
+        // Reset state
+        mode = .textSearch
+        inputBuffer = ""
+        textSearchQuery = "" // Reset query model
+        uiElements = allTextElements // Reset filtered results
+        
+        // Scan all text elements
+        allTextElements = uiElementScanner.scanTextElements()
+        uiElements = allTextElements
+        
+        print("TextSearch: Found \(allTextElements.count) text elements")
+        
+        // Show overlay for highlighting (don't capture keys yet)
+        show(enableKeyCapture: false)
+        
+        // Listen for Escape key only (pass through others for text input)
+        hotKeyManager?.enableOverlayMode(
+            keyHandler: nil,  // Pass through regular keys
+            escapeHandler: { [weak self] in
+                Task { @MainActor in
+                    self?.hideTextSearch()
+                }
+            }
+        )
+        
+        // Configure text search window callbacks
+        textSearchWindowController.onTextChanged = { [weak self] query in
+            Task { @MainActor in
+                print("TextSearch: Query changed to '\(query)'")
+                self?.textSearchQuery = query
+                // didSet will call filterTextElementsByQuery()
+                
+                // Manually update match count
+                self?.filterTextElementsByQuery() 
+                self?.textSearchWindowController.updateMatchCount(self?.uiElements.count ?? 0)
+            }
+        }
+        
+        textSearchWindowController.onSubmit = { [weak self] in
+            Task { @MainActor in
+                self?.clickFirstTextMatch()
+            }
+        }
+        
+        textSearchWindowController.onCancel = { [weak self] in
+            Task { @MainActor in
+                self?.hideTextSearch()
+            }
+        }
+        
+        // Show the search window
+        textSearchWindowController.show()
+        textSearchWindowController.updateMatchCount(allTextElements.count)
+    }
+    
+    /// Hide text search mode
+    private func hideTextSearch() {
+        textSearchQuery = "" // Reset query
+        textSearchWindowController.hide()
+        hide()
+    }
+    
+    /// Filter text elements based on current input buffer
+    private func filterTextElements() {
+        if inputBuffer.isEmpty {
+            uiElements = allTextElements
+        } else {
+            uiElements = allTextElements.filter { element in
+                guard let title = element.title else { return false }
+                return title.lowercased().contains(inputBuffer)
+            }
+        }
+        print("TextSearch: Filtered to \(uiElements.count) elements for '\(inputBuffer)'")
+    }
+    
+    /// Filter text elements based on textSearchQuery (for TextField with IME support)
+    private func filterTextElementsByQuery() {
+        objectWillChange.send() // Force UI update
+        
+        if textSearchQuery.isEmpty {
+            uiElements = allTextElements
+        } else {
+            uiElements = allTextElements.filter { element in
+                guard let title = element.title else { return false }
+                return title.localizedCaseInsensitiveContains(textSearchQuery)
+            }
+        }
+        print("TextSearch: Filtered to \(uiElements.count) elements for query '\(textSearchQuery)'")
+    }
+    
+    /// Click first matching text element (called from Enter key in TextField)
+    func clickFirstTextMatch() {
+        if let firstMatch = uiElements.first {
+            clickTextElement(firstMatch)
+        }
+    }
+    
+    /// Click a text element
+    private func clickTextElement(_ element: UIElementModel) {
+        print("TextSearch: Clicking '\(element.title ?? "unknown")'")
+        
+        // Hide search window and overlay first
+        hideTextSearch()
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 300 * 1_000_000) // 300ms
+            
+            // Try Accessibility API first
+            if element.element.performClick() {
+                print("AXPerformAction dispatched")
+                return
+            }
+            
+            // Fallback: Mouse click
+            await performMouseClick(at: CGPoint(x: element.frame.midX, y: element.frame.midY))
+        }
     }
     
     func refreshAppWindows() {
@@ -791,6 +985,7 @@ final class ViewModel: ObservableObject {
             // Try Accessibility API first
             if element.element.performClick() {
                 print("AXPerformAction dispatched")
+                return
             }
             
             // Fallback / Ensure click: Mouse simulation
@@ -817,7 +1012,7 @@ final class ViewModel: ObservableObject {
         down.post(tap: .cghidEventTap)
         
         // Verify click duration: Hold for a short duration to ensure it registers
-        try? await Task.sleep(nanoseconds: 50 * 1_000_000) // 50ms hold
+        try? await Task.sleep(nanoseconds: 150 * 1_000_000) // 150ms hold
         
         up.post(tap: .cghidEventTap)
         

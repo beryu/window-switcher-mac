@@ -112,6 +112,79 @@ final class UIElementScanner {
         assignLabels(to: &elements)
     }
     
+    // MARK: - Text Search
+    
+    /// Scan the frontmost application's window for all elements with text
+    /// - Parameter maxElements: Maximum number of elements to return
+    /// - Returns: Array of UIElementModel representing elements with text content
+    func scanTextElements(maxElements: Int = 500) -> [UIElementModel] {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            print("UIElementScanner: No frontmost application")
+            return []
+        }
+        
+        let pid = frontmostApp.processIdentifier
+        let appElement = AXUIElementCreateApplication(pid)
+        
+        // Get focused window
+        var focusedWindow: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow)
+        
+        guard result == .success, let windowElement = focusedWindow else {
+            print("UIElementScanner: Could not get focused window")
+            return []
+        }
+        
+        let axWindow = windowElement as! AXUIElement
+        
+        // Recursively find all elements with text
+        var elements: [UIElementModel] = []
+        scanTextElement(axWindow, into: &elements, maxElements: maxElements)
+        
+        print("UIElementScanner: Found \(elements.count) text elements")
+        return elements
+    }
+    
+    /// Recursively scan for elements with text content (including non-clickable elements)
+    private func scanTextElement(_ element: AXUIElement, into elements: inout [UIElementModel], maxElements: Int, depth: Int = 0) {
+        guard depth < 20 else { return }
+        guard elements.count < maxElements else { return }
+        
+        // Check if element is visible and enabled
+        guard element.isVisible() && element.isEnabled() else { return }
+        
+        // Get text content (getTitle already includes value and description fallbacks)
+        let textContent = element.getTitle()
+        
+        // Only include elements with non-empty text
+        if let text = textContent, !text.isEmpty {
+                // Prefer precise text frame, fallback to element frame
+                let frame = element.getTextFrame(for: text) ?? element.getFrame()
+                
+                if let frame = frame, let role = element.getRole() {
+                // Filter out very small or invisible elements
+                if frame.width > 5 && frame.height > 5 {
+                    let uiElement = UIElementModel(
+                        id: UUID(),
+                        element: element,
+                        frame: frame,
+                        role: role,
+                        title: text,
+                        label: ""  // Not used for text search
+                    )
+                    elements.append(uiElement)
+                }
+            }
+        }
+        
+        // Recursively scan children
+        if let children = element.getChildren() {
+            for child in children {
+                scanTextElement(child, into: &elements, maxElements: maxElements, depth: depth + 1)
+            }
+        }
+    }
+    
     // MARK: - Clustering
     
     /// Threshold distance for considering elements as part of the same cluster

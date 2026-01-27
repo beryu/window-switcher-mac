@@ -1,0 +1,204 @@
+import AppKit
+
+/// NSWindow subclass that allows becoming key window despite borderless style
+class TextSearchWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+    
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.type == .keyDown {
+            if event.modifierFlags.contains(.command) {
+                switch event.charactersIgnoringModifiers {
+                case "x":
+                    if let editor = firstResponder as? NSText {
+                        editor.cut(nil)
+                        return true
+                    }
+                case "c":
+                    if let editor = firstResponder as? NSText {
+                        editor.copy(nil)
+                        return true
+                    }
+                case "v":
+                    if let editor = firstResponder as? NSText {
+                        editor.paste(nil)
+                        return true
+                    }
+                case "a":
+                    if let editor = firstResponder as? NSText {
+                        editor.selectAll(nil)
+                        return true
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+/// Floating window controller for text search input (Spotlight-style)
+/// Uses NSSearchField for proper native behavior
+final class TextSearchWindowController: NSObject, NSTextFieldDelegate {
+    private var window: NSWindow?
+    private var textField: NSTextField?
+    private var matchCountLabel: NSTextField?
+    
+    var onTextChanged: ((String) -> Void)?
+    var onSubmit: (() -> Void)?
+    var onCancel: (() -> Void)?
+    
+    override init() {
+        super.init()
+    }
+    
+    func show() {
+        if window == nil {
+            createWindow()
+        }
+        
+        guard let window = window else { return }
+        
+        // Position at top center of main screen
+        if let screen = NSScreen.main {
+            let windowWidth: CGFloat = 600
+            let windowHeight: CGFloat = 60
+            let x = (screen.frame.width - windowWidth) / 2 + screen.frame.origin.x
+            let y = screen.frame.maxY - windowHeight - 120
+            window.setFrame(NSRect(x: x, y: y, width: windowWidth, height: windowHeight), display: true)
+        }
+        
+        // Show and focus
+        // Order: Activate app -> Make key and order front -> Make first responder
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        
+        if let textField = textField {
+            // Ensure search field is enabled and editable
+            textField.isEnabled = true
+            textField.isEditable = true
+            window.makeFirstResponder(textField)
+            
+            // Force reset input state
+            textField.stringValue = ""
+            if let editor = textField.currentEditor() {
+                editor.string = ""
+                editor.selectedRange = NSRange(location: 0, length: 0)
+            }
+        }
+        
+        updateMatchCount(0)
+    }
+    
+    func hide() {
+        window?.orderOut(nil)
+    }
+    
+    func updateMatchCount(_ count: Int) {
+        matchCountLabel?.stringValue = count > 0 ? "\(count) matches" : ""
+    }
+    
+    private func createWindow() {
+        // Create borderless floating window
+        let window = TextSearchWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 60),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.level = .floating
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isReleasedWhenClosed = false
+        
+        // Create content view with rounded corners
+        let contentView = NSView(frame: window.contentView!.bounds)
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor(white: 0.1, alpha: 0.95).cgColor
+        contentView.layer?.cornerRadius = 10
+        contentView.layer?.borderWidth = 1
+        contentView.layer?.borderColor = NSColor(white: 0.3, alpha: 0.5).cgColor
+        
+        // Custom search icon
+        let searchIcon = NSImageView(frame: NSRect(x: 20, y: 18, width: 24, height: 24))
+        searchIcon.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search") 
+            ?? NSImage(named: NSImage.touchBarSearchTemplateName)
+        searchIcon.imageScaling = .scaleProportionallyUpOrDown
+        searchIcon.contentTintColor = .lightGray
+        contentView.addSubview(searchIcon)
+        
+        // Create search field (using NSTextField for custom layout)
+        let textField = NSTextField(frame: NSRect(x: 52, y: 12, width: 420, height: 36))
+        textField.placeholderString = "Window Search..."
+        textField.font = NSFont.systemFont(ofSize: 22, weight: .regular)
+        textField.textColor = .white
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.isBordered = false
+        textField.isBezeled = false
+        textField.delegate = self
+        // Remove default action to prevent firing during IME confirmation
+        // searchField.action = #selector(textFieldAction(_:))
+        
+        self.textField = textField
+        contentView.addSubview(textField)
+        
+        // Create match count label
+        let matchCountLabel = NSTextField(frame: NSRect(x: 480, y: 18, width: 100, height: 24))
+        matchCountLabel.isEditable = false
+        matchCountLabel.isBordered = false
+        matchCountLabel.backgroundColor = .clear
+        matchCountLabel.textColor = .gray
+        matchCountLabel.font = NSFont.systemFont(ofSize: 14)
+        matchCountLabel.alignment = .right
+        self.matchCountLabel = matchCountLabel
+        contentView.addSubview(matchCountLabel)
+        
+        window.contentView = contentView
+        self.window = window
+        
+        // Monitor for Escape key
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 { // Escape
+                self?.onCancel?()
+                return nil
+            }
+            return event
+        }
+    }
+    
+    // MARK: - NSSearchFieldDelegate / NSTextFieldDelegate
+    
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            // Handle Enter key manually to distinguish between IME confirmation and Search submit
+            if textView.hasMarkedText() {
+                // IME composition is active, let system handle the confirmation
+                print("TextSearchWindow: Enter key ignored (in IME composition)")
+                return false
+            } else {
+                // No IME composition, trigger search submit
+                print("TextSearchWindow: Enter key pressed (submit)")
+                onSubmit?()
+                return true
+            }
+        }
+        return false
+    }
+    
+    // MARK: - NSTextFieldDelegate
+    
+    func controlTextDidChange(_ obj: Notification) {
+        guard let textField = obj.object as? NSTextField else { return }
+        
+        // Use currentEditor string to capture IME confirmed/unconfirmed text
+        // Fallback to stringValue if editor is not available
+        let text = textField.currentEditor()?.string ?? textField.stringValue
+        print("TextSearchWindow: Text changed to '\(text)' (stringValue: '\(textField.stringValue)')")
+        onTextChanged?(text)
+    }
+}

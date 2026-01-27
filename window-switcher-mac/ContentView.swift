@@ -183,6 +183,20 @@ struct OverlayContentView: View {
                         .padding(20)
                     }
                 }
+            } else if viewModel.mode == .textSearch {
+                // Text Search Mode
+                
+                // Highlight matching elements
+                ForEach(viewModel.uiElements.filter { $0.frame.intersects(screenFrame) }) { element in
+                    // Highlight border
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.yellow, lineWidth: 2)
+                        .frame(width: element.frame.width, height: element.frame.height)
+                        .position(
+                            x: element.frame.midX - screenFrame.origin.x,
+                            y: element.frame.midY - screenFrame.origin.y
+                        )
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -87,24 +87,56 @@ final class GlobalHotKeyManager {
         
         // Handle overlay mode key capture
         if manager.isOverlayActive {
-          // No modifiers should be pressed for overlay key handling
-          if !hasCommand && !hasShift && !hasOption && !hasControl {
-            // Handle Escape key to close overlay
-            if eventKeyCode == CGKeyCode(kVK_Escape) {
-              print("GlobalHotKeyManager: Escape detected during overlay, closing.")
-              DispatchQueue.main.async {
-                manager.overlayEscapeHandler?()
-              }
-              return nil
+          // Handle Escape key to close overlay (allow with no modifiers)
+          if eventKeyCode == CGKeyCode(kVK_Escape) && !hasCommand && !hasShift && !hasOption && !hasControl {
+            print("GlobalHotKeyManager: Escape detected during overlay, closing.")
+            DispatchQueue.main.async {
+              manager.overlayEscapeHandler?()
             }
+            return nil
+          }
+          
+          // If no key handler is set, pass through all key events to the app (for TextField input)
+          // This allows Backspace, Return, and normal typing to reach the NSTextField
+          guard manager.overlayKeyHandler != nil else {
+            return Unmanaged.passRetained(event)
+          }
+          
+          // Handle Backspace key
+          if eventKeyCode == CGKeyCode(kVK_Delete) && !hasCommand && !hasOption && !hasControl {
+            print("GlobalHotKeyManager: Backspace detected during overlay.")
+            DispatchQueue.main.async {
+              manager.overlayKeyHandler?("\u{08}")  // Backspace character
+            }
+            return nil
+          }
+          
+          // Handle Return key
+          if (eventKeyCode == CGKeyCode(kVK_Return) || eventKeyCode == CGKeyCode(kVK_ANSI_KeypadEnter)) && !hasCommand && !hasOption && !hasControl {
+            print("GlobalHotKeyManager: Return detected during overlay.")
+            DispatchQueue.main.async {
+              manager.overlayKeyHandler?("\n")
+            }
+            return nil
+          }
+          
+          // Get Unicode characters from the event (supports IME input including Japanese)
+          if !hasCommand && !hasControl {
+            var actualStringLength: Int = 0
+            var unicodeString = [UniChar](repeating: 0, count: 4)
+            event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &actualStringLength, unicodeString: &unicodeString)
             
-            // Convert key code to character
-            if let character = manager.keyCodeToCharacter(eventKeyCode) {
-              print("GlobalHotKeyManager: Key '\(character)' captured during overlay.")
-              DispatchQueue.main.async {
-                manager.overlayKeyHandler?(character)
+            if actualStringLength > 0 {
+              let chars = unicodeString.prefix(actualStringLength)
+              let character = String(utf16CodeUnits: Array(chars), count: actualStringLength)
+              
+              if !character.isEmpty {
+                print("GlobalHotKeyManager: Unicode character '\(character)' captured during overlay.")
+                DispatchQueue.main.async {
+                  manager.overlayKeyHandler?(character)
+                }
+                return nil
               }
-              return nil
             }
           }
           
@@ -137,11 +169,12 @@ final class GlobalHotKeyManager {
   }
   
   /// Enable overlay mode to capture all keyboard input
-  func enableOverlayMode(keyHandler: @escaping KeyHandler, escapeHandler: @escaping Handler) {
+  /// If keyHandler is nil, key events will be passed through (for TextField input)
+  func enableOverlayMode(keyHandler: KeyHandler?, escapeHandler: @escaping Handler) {
     self.overlayKeyHandler = keyHandler
     self.overlayEscapeHandler = escapeHandler
     self.isOverlayActive = true
-    print("GlobalHotKeyManager: Overlay mode enabled - capturing all keyboard input")
+    print("GlobalHotKeyManager: Overlay mode enabled - \(keyHandler != nil ? "capturing" : "passing through") keyboard input")
   }
   
   /// Disable overlay mode and stop capturing all keyboard input
@@ -197,6 +230,20 @@ final class GlobalHotKeyManager {
       // Special Keys
       CGKeyCode(kVK_Return): "\n",
       CGKeyCode(kVK_ANSI_KeypadEnter): "\n",
+      CGKeyCode(kVK_Space): " ",
+      CGKeyCode(kVK_Delete): "\u{08}",  // Backspace
+      // Symbols
+      CGKeyCode(kVK_ANSI_Minus): "-",
+      CGKeyCode(kVK_ANSI_Equal): "=",
+      CGKeyCode(kVK_ANSI_LeftBracket): "[",
+      CGKeyCode(kVK_ANSI_RightBracket): "]",
+      CGKeyCode(kVK_ANSI_Semicolon): ";",
+      CGKeyCode(kVK_ANSI_Quote): "'",
+      CGKeyCode(kVK_ANSI_Comma): ",",
+      CGKeyCode(kVK_ANSI_Period): ".",
+      CGKeyCode(kVK_ANSI_Slash): "/",
+      CGKeyCode(kVK_ANSI_Backslash): "\\",
+      CGKeyCode(kVK_ANSI_Grave): "`",
     ]
     return keyMap[keyCode]
   }
@@ -255,6 +302,16 @@ extension GlobalHotKeyManager {
     return GlobalHotKeyManager(
       keyCode: CGKeyCode(kVK_Escape),
       modifiers: kControlKeyMask | kOptionKeyMask,
+      handler: handler
+    )
+  }
+    
+  /// Creates a hotkey for Control + / (slash)
+  static func controlSlash(handler: @escaping Handler) -> GlobalHotKeyManager? {
+    // kVK_ANSI_Slash = 0x2C (44)
+    return GlobalHotKeyManager(
+      keyCode: CGKeyCode(kVK_ANSI_Slash),
+      modifiers: kControlKeyMask,
       handler: handler
     )
   }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		885FC5382F28CC47005E9D98 /* TextSearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885FC5372F28CC47005E9D98 /* TextSearchWindowController.swift */; };
 		887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */; };
 		88E6797A2F25691C0037E4E2 /* GlobalHotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */; };
 		88E6797B2F25691C0037E4E2 /* OverlayPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */; };
@@ -44,6 +45,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		885FC5372F28CC47005E9D98 /* TextSearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSearchWindowController.swift; sourceTree = "<group>"; };
 		887C94322BB0912100E06AE5 /* Extension+AXUIElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extension+AXUIElement.swift"; sourceTree = "<group>"; };
 		88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKeyManager.swift; sourceTree = "<group>"; };
 		88E6797B2F257DCA0037E4E2 /* UIElementModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIElementModel.swift; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 				B180F7202BB007CF0017A08D /* ContentView.swift */,
 				88E679792F25691C0037E4E2 /* GlobalHotKeyManager.swift */,
 				88E6797C2F25691C0037E4E2 /* OverlayPanelController.swift */,
+				885FC5372F28CC47005E9D98 /* TextSearchWindowController.swift */,
 				B180F7222BB007D00017A08D /* Assets.xcassets */,
 				B180F7272BB007D00017A08D /* window_switcher_mac.entitlements */,
 				B180F7242BB007D00017A08D /* Preview Content */,
@@ -335,6 +338,7 @@
 				88E679872F265B120037E4E2 /* ClusterLabelView.swift in Sources */,
 				B13766E42BB54CCA002822E1 /* ViewModel.swift in Sources */,
 				88E6797A2F25691C0037E4E2 /* GlobalHotKeyManager.swift in Sources */,
+				885FC5382F28CC47005E9D98 /* TextSearchWindowController.swift in Sources */,
 				88E6797B2F25691C0037E4E2 /* OverlayPanelController.swift in Sources */,
 				887C94332BB0912100E06AE5 /* Extension+AXUIElement.swift in Sources */,
 			);

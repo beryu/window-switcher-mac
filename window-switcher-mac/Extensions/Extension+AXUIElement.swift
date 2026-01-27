@@ -228,4 +228,28 @@ extension AXUIElement {
     
     return false
   }
+
+  /// Get the frame of the text content if supported
+  /// - Parameter text: The text content to get bounds for (used for length calculation)
+  func getTextFrame(for text: String) -> CGRect? {
+    let length = (text as NSString).length
+    var range = CFRange(location: 0, length: length)
+    
+    guard let rangeValue = AXValueCreate(.cfRange, &range) else { return nil }
+    
+    var boundsRef: AnyObject?
+    let result = AXUIElementCopyParameterizedAttributeValue(self, kAXBoundsForRangeParameterizedAttribute as CFString, rangeValue, &boundsRef)
+    
+    if result == .success, let boundsValue = boundsRef as! AXValue? {
+      var rect = CGRect.zero
+      AXValueGetValue(boundsValue, .cgRect, &rect)
+      
+      // Verify reasonable rect
+      if rect.width > 0 && rect.height > 0 {
+          return rect
+      }
+    }
+    
+    return nil
+  }
 }
