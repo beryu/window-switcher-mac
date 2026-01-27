@@ -187,15 +187,22 @@ struct OverlayContentView: View {
                 // Text Search Mode
                 
                 // Highlight matching elements
-                ForEach(viewModel.uiElements.filter { $0.frame.intersects(screenFrame) }) { element in
-                    // Highlight border
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.yellow, lineWidth: 2)
-                        .frame(width: element.frame.width, height: element.frame.height)
-                        .position(
-                            x: element.frame.midX - screenFrame.origin.x,
-                            y: element.frame.midY - screenFrame.origin.y
-                        )
+                // Highlight matching elements
+                ForEach(Array(viewModel.uiElements.enumerated()), id: \.element.id) { index, element in
+                    if element.frame.intersects(screenFrame) {
+                        let isSelected = index == viewModel.selectedTextElementIndex
+                        let showSelection = isSelected && viewModel.isTextSearchSelectionMode
+
+                        // Highlight border
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(showSelection ? Color.green : Color.yellow, lineWidth: showSelection ? 5 : 2)
+                            .frame(width: element.frame.width, height: element.frame.height)
+                            .position(
+                                x: element.frame.midX - screenFrame.origin.x,
+                                y: element.frame.midY - screenFrame.origin.y
+                            )
+                            .zIndex(showSelection ? 100 : 0) // Bring selected to front
+                    }
                 }
             }
         }

@@ -27,6 +27,8 @@ final class ViewModel: ObservableObject {
     @Published var focused: Bool = false
     @Published var mode: Mode = .windowSwitcher
     @Published var uiElementSubMode: UIElementSubMode = .clusterSelection
+    @Published var selectedTextElementIndex: Int? = 0 
+    @Published var isTextSearchSelectionMode: Bool = false // Two-phase selection state
     
     enum Mode {
         case windowSwitcher
@@ -357,6 +359,11 @@ final class ViewModel: ObservableObject {
     func show(enableKeyCapture: Bool = true) {
         checkPermission()
         
+        // Ensure Text Search window is hidden when showing standard overlay
+        if mode != .textSearch {
+            textSearchWindowController.hide()
+        }
+        
         overlayController.showOverlay { screenFrame in
             OverlayContentView(viewModel: self, screenFrame: screenFrame)
         }
@@ -439,6 +446,8 @@ final class ViewModel: ObservableObject {
         inputBuffer = ""
         textSearchQuery = "" // Reset query model
         uiElements = allTextElements // Reset filtered results
+        isTextSearchSelectionMode = false
+        selectedTextElementIndex = 0
         
         // Scan all text elements
         allTextElements = uiElementScanner.scanTextElements()
@@ -469,6 +478,11 @@ final class ViewModel: ObservableObject {
                 // Manually update match count
                 self?.filterTextElementsByQuery() 
                 self?.textSearchWindowController.updateMatchCount(self?.uiElements.count ?? 0)
+                
+                // Reset selection mode when text changes
+                self?.isTextSearchSelectionMode = false
+                self?.textSearchWindowController.isSelectionMode = false
+                self?.selectedTextElementIndex = 0
             }
         }
         
@@ -487,6 +501,19 @@ final class ViewModel: ObservableObject {
         // Show the search window
         textSearchWindowController.show()
         textSearchWindowController.updateMatchCount(allTextElements.count)
+        
+        // Handle Arrow Keys
+        textSearchWindowController.onMoveUp = { [weak self] in
+            Task { @MainActor in
+                self?.selectPreviousTextElement()
+            }
+        }
+        
+        textSearchWindowController.onMoveDown = { [weak self] in
+            Task { @MainActor in
+                self?.selectNextTextElement()
+            }
+        }
     }
     
     /// Hide text search mode
@@ -507,6 +534,13 @@ final class ViewModel: ObservableObject {
             }
         }
         print("TextSearch: Filtered to \(uiElements.count) elements for '\(inputBuffer)'")
+        
+        // Reset selection to first item
+        if uiElements.isEmpty {
+            selectedTextElementIndex = nil
+        } else {
+            selectedTextElementIndex = 0
+        }
     }
     
     /// Filter text elements based on textSearchQuery (for TextField with IME support)
@@ -522,12 +556,58 @@ final class ViewModel: ObservableObject {
             }
         }
         print("TextSearch: Filtered to \(uiElements.count) elements for query '\(textSearchQuery)'")
+        
+        // Reset selection to first item only if unique or empty filter
+        // In Phase 1 (Filtering), we don't select anything if there are multiple matches
+        if uiElements.count == 1 {
+            selectedTextElementIndex = 0
+        } else {
+            selectedTextElementIndex = nil
+        }
     }
     
-    /// Click first matching text element (called from Enter key in TextField)
+    /// Select next text element (Arrow Down)
+    func selectNextTextElement() {
+        guard !uiElements.isEmpty else { return }
+        guard let currentIndex = selectedTextElementIndex else {
+            selectedTextElementIndex = 0
+            return
+        }
+        
+        selectedTextElementIndex = (currentIndex + 1) % uiElements.count
+    }
+    
+    /// Select previous text element (Arrow Up)
+    func selectPreviousTextElement() {
+        guard !uiElements.isEmpty else { return }
+        guard let currentIndex = selectedTextElementIndex else {
+            selectedTextElementIndex = uiElements.count - 1
+            return
+        }
+        
+        selectedTextElementIndex = (currentIndex - 1 + uiElements.count) % uiElements.count
+    }
+    
+    /// Handle Enter key from text search
     func clickFirstTextMatch() {
-        if let firstMatch = uiElements.first {
-            clickTextElement(firstMatch)
+        // Phase 2: Already in selection mode -> Click the selected element
+        if isTextSearchSelectionMode {
+            if let index = selectedTextElementIndex, index < uiElements.count {
+                clickTextElement(uiElements[index])
+            }
+            return
+        }
+        
+        // Phase 1: Filtering mode
+        if uiElements.count == 1 {
+            // Single match -> Click immediately
+            clickTextElement(uiElements[0])
+        } else if uiElements.count > 1 {
+            // Multiple matches -> Enter selection mode
+            isTextSearchSelectionMode = true
+            textSearchWindowController.isSelectionMode = true
+            selectedTextElementIndex = 0
+            print("TextSearch: Entering selection mode with \(uiElements.count) candidates")
         }
     }
     

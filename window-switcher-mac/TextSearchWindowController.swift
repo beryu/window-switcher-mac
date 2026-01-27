@@ -1,53 +1,76 @@
 import AppKit
 
-/// NSWindow subclass that allows becoming key window despite borderless style
 class TextSearchWindow: NSWindow {
+    var onMoveUp: (() -> Void)?
+    var onMoveDown: (() -> Void)?
+    var onCancel: (() -> Void)?
+    
+    // Only intercept arrow keys when in selection mode
+    var isSelectionMode: Bool = false
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown {
-            if event.modifierFlags.contains(.command) {
-                switch event.charactersIgnoringModifiers {
-                case "x":
-                    if let editor = firstResponder as? NSText {
-                        editor.cut(nil)
-                        return true
-                    }
-                case "c":
-                    if let editor = firstResponder as? NSText {
-                        editor.copy(nil)
-                        return true
-                    }
-                case "v":
-                    if let editor = firstResponder as? NSText {
-                        editor.paste(nil)
-                        return true
-                    }
-                case "a":
-                    if let editor = firstResponder as? NSText {
-                        editor.selectAll(nil)
-                        return true
-                    }
-                default:
-                    break
+            // Only intercept navigation keys if we are in the special selection mode
+            if isSelectionMode && !event.modifierFlags.contains(.command) {
+                let chars = event.charactersIgnoringModifiers ?? ""
+                
+                // Vim-style navigation
+                if chars == "j" || chars == "l" { // Down / Right -> Next
+                    onMoveDown?()
+                    return // Consume
+                }
+                if chars == "k" || chars == "h" { // Up / Left -> Prev
+                    onMoveUp?()
+                    return // Consume
+                }
+                
+                // Arrow Keys (Fallback)
+                if event.keyCode == 126 { // Arrow Up
+                    onMoveUp?()
+                    return // Consume event (No beep)
+                }
+                if event.keyCode == 125 { // Arrow Down
+                    onMoveDown?()
+                    return // Consume event (No beep)
                 }
             }
+            
+            // Escape always cancels
+            if event.keyCode == 53 { // Escape
+                 // Check modifiers? standard Escape usually has no modifiers or maybe option?
+                 if !event.modifierFlags.contains(.command) { // Allow Cmd+Esc to pass? Usually Cmd+Esc shows Front Row or something legacy? System takes it. 
+                     // Just intercept standard Escape
+                     onCancel?()
+                     return
+                 }
+            }
         }
-        return super.performKeyEquivalent(with: event)
+        super.sendEvent(event)
     }
 }
 
 /// Floating window controller for text search input (Spotlight-style)
 /// Uses NSSearchField for proper native behavior
 final class TextSearchWindowController: NSObject, NSTextFieldDelegate {
-    private var window: NSWindow?
+    private var window: TextSearchWindow? // Update type
     private var textField: NSTextField?
     private var matchCountLabel: NSTextField?
     
     var onTextChanged: ((String) -> Void)?
     var onSubmit: (() -> Void)?
     var onCancel: (() -> Void)?
+    var onMoveUp: (() -> Void)?
+    var onMoveDown: (() -> Void)?
+    
+    // Proxy for window state
+    var isSelectionMode: Bool = false {
+        didSet {
+            window?.isSelectionMode = isSelectionMode
+        }
+    }
     
     override init() {
         super.init()
@@ -115,6 +138,12 @@ final class TextSearchWindowController: NSObject, NSTextFieldDelegate {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isReleasedWhenClosed = false
         
+        // Wire up events directly to window
+        window.onMoveUp = { [weak self] in self?.onMoveUp?() }
+        window.onMoveDown = { [weak self] in self?.onMoveDown?() }
+        window.onCancel = { [weak self] in self?.onCancel?() }
+        window.isSelectionMode = isSelectionMode // Sync initial state
+        
         // Create content view with rounded corners
         let contentView = NSView(frame: window.contentView!.bounds)
         contentView.wantsLayer = true
@@ -160,15 +189,6 @@ final class TextSearchWindowController: NSObject, NSTextFieldDelegate {
         
         window.contentView = contentView
         self.window = window
-        
-        // Monitor for Escape key
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 { // Escape
-                self?.onCancel?()
-                return nil
-            }
-            return event
-        }
     }
     
     // MARK: - NSSearchFieldDelegate / NSTextFieldDelegate
@@ -187,6 +207,7 @@ final class TextSearchWindowController: NSObject, NSTextFieldDelegate {
                 return true
             }
         }
+        
         return false
     }
     
