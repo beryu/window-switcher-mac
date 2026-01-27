@@ -628,7 +628,7 @@ final class ViewModel: ObservableObject {
             }
             
             // Fallback: Mouse click
-            await performMouseClick(at: CGPoint(x: element.frame.midX, y: element.frame.midY))
+            await performMouseClick(at: CGPoint(x: element.frame.minX + 5, y: element.frame.midY))
         }
     }
     
