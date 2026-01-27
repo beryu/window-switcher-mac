@@ -166,37 +166,40 @@ final class UIElementScanner {
             }
         }
         
-        // If children provided candidates, we return those and ignore the current element (Deduplication)
-        if !childResults.isEmpty {
-            return childResults
-        }
-        
         // If no children candidates, check if current element is a valid candidate
         let isEnabled = element.isEnabled()
         let textContent = element.getTitle()
         
         if isEnabled, let text = textContent, !text.isEmpty {
-            // Prefer precise text frame, fallback to element frame
-            let frame = element.getTextFrame(for: text) ?? element.getFrame()
+            // Deduplication: Only skip if one of the children already has this exact text
+            // This allows cases like [Tab "File.txt"] -> [Button "Close"] to return both
+            let isCoveredByChildren = childResults.contains { child in
+                return child.title == text
+            }
             
-            if let frame = frame, let role = element.getRole() {
-                // Filter out very small or invisible elements
-                if frame.width > 5 && frame.height > 5 {
-                    let uiElement = UIElementModel(
-                        id: UUID(),
-                        element: element,
-                        frame: frame,
-                        role: role,
-                        title: text,
-                        label: ""  // Not used for text search
-                    )
-                    limit -= 1
-                    return [uiElement]
+            if !isCoveredByChildren {
+                // Prefer precise text frame, fallback to element frame
+                let frame = element.getTextFrame(for: text) ?? element.getFrame()
+                
+                if let frame = frame, let role = element.getRole() {
+                    // Filter out very small or invisible elements
+                    if frame.width > 5 && frame.height > 5 {
+                        let uiElement = UIElementModel(
+                            id: UUID(),
+                            element: element,
+                            frame: frame,
+                            role: role,
+                            title: text,
+                            label: ""  // Not used for text search
+                        )
+                        limit -= 1
+                        childResults.append(uiElement)
+                    }
                 }
             }
         }
         
-        return []
+        return childResults
     }
     
     // MARK: - Clustering
