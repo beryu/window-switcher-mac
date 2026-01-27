@@ -8,9 +8,9 @@ It's experiment app for trying Accessibility API.
 1. Press Control + Escape to show Window Switcher
 2. Press an alphabet that you want to focus
 
-### UI Element Selection
-1. Press Control + Option + Escape to show UI Element Selection
-2. Type the alphabet displayed on the element you want to click
+### Text Search
+1. Press Control + / to show Text Search
+2. Type text to filter clicking targets
 
 ### Scroll Mode
 1. Press Option + Escape to start Scroll Mode
