@@ -385,7 +385,15 @@ final class ViewModel: ObservableObject {
             }
             
             let iconImage: NSImage?
-            if let app = NSRunningApplication(processIdentifier: pid) {
+            let app = NSRunningApplication(processIdentifier: pid)
+            if let app = app {
+                // Filter out extensions and background-only apps
+                // activationPolicy: .regular = normal app with UI
+                //                   .accessory = status bar only (no dock)
+                //                   .prohibited = no UI at all (extensions/widgets)
+                if app.activationPolicy != .regular {
+                    continue
+                }
                 iconImage = app.icon
             } else {
                 iconImage = nil
