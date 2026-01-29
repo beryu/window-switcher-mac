@@ -14,8 +14,7 @@ It's experiment app for trying Accessibility API.
 
 ### Scroll Mode
 1. Press Option + Escape to start Scroll Mode
-2. Select a scrollable area if multiple exist
-3. Use `h`, `j`, `k`, `l` keys to scroll
+2. Use `h`, `j`, `k`, `l` keys to scroll
 
 ## Requirements
 
