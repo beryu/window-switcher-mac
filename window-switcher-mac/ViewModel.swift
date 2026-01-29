@@ -138,21 +138,21 @@ final class ViewModel: ObservableObject {
         // UI Element Mode: Control + Option + Escape
         uiElementHotKeyManager = GlobalHotKeyManager.controlOptionEscape { [weak self] in
              Task { @MainActor in
-                 self?.startUIElementSelection()
+                 await self?.startUIElementSelection()
              }
         }
         
         // Scroll Mode: Option + Escape
         scrollHotKeyManager = GlobalHotKeyManager.optionEscape { [weak self] in
             Task { @MainActor in
-                self?.startScrollMode()
+                await self?.startScrollMode()
             }
         }
         
         // Text Search Mode: Control + /
         textSearchHotKeyManager = GlobalHotKeyManager.controlSlash { [weak self] in
             Task { @MainActor in
-                self?.startTextSearchMode()
+                await self?.startTextSearchMode()
             }
         }
         
@@ -425,7 +425,7 @@ final class ViewModel: ObservableObject {
     
     // MARK: - Text Search Mode
     
-    func startTextSearchMode() {
+    func startTextSearchMode() async {
         print("TextSearch: startTextSearchMode called")
         
         guard let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
@@ -450,7 +450,7 @@ final class ViewModel: ObservableObject {
         selectedTextElementIndex = 0
         
         // Scan all text elements
-        allTextElements = uiElementScanner.scanTextElements()
+        allTextElements = await uiElementScanner.scanTextElements()
         uiElements = allTextElements
         
         print("TextSearch: Found \(allTextElements.count) text elements")
@@ -871,7 +871,7 @@ final class ViewModel: ObservableObject {
     
     // MARK: - Scroll Mode Actions
     
-    func startScrollMode() {
+    func startScrollMode() async {
         guard let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
             $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
         }) else {
@@ -880,7 +880,7 @@ final class ViewModel: ObservableObject {
         self.previouslyActiveApp = prevActiveApp
         
         // Scan for scrollable elements
-        let scrollableElements = uiElementScanner.scanScrollableElements()
+        let scrollableElements = await uiElementScanner.scanScrollableElements()
         
         if scrollableElements.isEmpty {
             // No specific scrollable elements found, fallback to window center
@@ -945,7 +945,7 @@ final class ViewModel: ObservableObject {
     
     // MARK: - UI Element Actions
     
-    func startUIElementSelection() {
+    func startUIElementSelection() async {
         guard let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
             $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
         }) else {
@@ -990,7 +990,7 @@ final class ViewModel: ObservableObject {
         
         // Scan all elements
         // Note: This matches the "focused window" that we are capturing
-        let allElements = uiElementScanner.scanFrontmostWindow()
+        let allElements = await uiElementScanner.scanFrontmostWindow()
         
         // Cluster elements
         let (foundClusters, foundIsolated) = uiElementScanner.clusterElements(elements: allElements)
@@ -1078,18 +1078,32 @@ final class ViewModel: ObservableObject {
     }
     
     private func performMouseClick(at point: CGPoint) async {
-        // Save current mouse position
-        let originalPosition = CGEvent(source: nil)?.location ?? point
+        // Get current mouse position
+        let currentPosition = CGEvent(source: nil)?.location ?? point
         
-        guard let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left),
-              let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
+        // Animation parameters
+        let steps = 10
+        let duration: UInt64 = 100 * 1_000_000 // 100ms total
+        let stepDuration = duration / UInt64(steps)
+        
+        // Animate movement
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let x = currentPosition.x + (point.x - currentPosition.x) * t
+            let y = currentPosition.y + (point.y - currentPosition.y) * t
+            let nextPoint = CGPoint(x: x, y: y)
+            
+            if let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: nextPoint, mouseButton: .left) {
+                move.post(tap: .cghidEventTap)
+            }
+            try? await Task.sleep(nanoseconds: stepDuration)
+        }
+        
+        // Prepare click events
+        guard let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
               let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else {
             return
         }
-        
-        // Post events
-        // Move mouse to target
-        move.post(tap: .cghidEventTap)
         
         // Click
         down.post(tap: .cghidEventTap)
@@ -1098,13 +1112,6 @@ final class ViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 150 * 1_000_000) // 150ms hold
         
         up.post(tap: .cghidEventTap)
-        
-        // Restore mouse position
-        // Let's move it back after a short delay so user sees where it clicked
-        try? await Task.sleep(nanoseconds: 150 * 1_000_000)
-        if let restore = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: originalPosition, mouseButton: .left) {
-            restore.post(tap: .cghidEventTap)
-        }
         
         print("Mouse click simulated at \(point)")
     }

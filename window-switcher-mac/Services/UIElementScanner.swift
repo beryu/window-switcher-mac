@@ -19,7 +19,7 @@ final class UIElementScanner {
     /// Scan the frontmost application's window for clickable elements
     /// - Parameter maxElements: Maximum number of elements to return
     /// - Returns: Array of UIElementModel representing clickable elements
-    func scanFrontmostWindow(maxElements: Int = 702) -> [UIElementModel] {
+    func scanFrontmostWindow(maxElements: Int = 702) async -> [UIElementModel] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
             print("UIElementScanner: No frontmost application")
             return []
@@ -40,8 +40,12 @@ final class UIElementScanner {
         let axWindow = windowElement as! AXUIElement
         
         // Recursively find all clickable elements
-        var elements: [UIElementModel] = []
-        scanElement(axWindow, into: &elements, maxElements: maxElements)
+        var elements = await scanElementAsync(axWindow, depth: 0)
+        
+        // Limit results
+        if elements.count > maxElements {
+            elements = Array(elements.prefix(maxElements))
+        }
         
         // Assign labels to elements
         assignLabels(to: &elements)
@@ -51,12 +55,11 @@ final class UIElementScanner {
     }
     
     /// Recursively scan an element and its children for clickable elements
-    private func scanElement(_ element: AXUIElement, into elements: inout [UIElementModel], maxElements: Int, depth: Int = 0) {
+    private func scanElementAsync(_ element: AXUIElement, depth: Int = 0) async -> [UIElementModel] {
         // Limit recursion depth to prevent infinite loops
-        guard depth < 20 else { return }
+        guard depth < 30 else { return [] }
         
-        // Check if we've reached the maximum
-        guard elements.count < maxElements else { return }
+        var currentLevelElements: [UIElementModel] = []
         
         // Check if this element is clickable and visible
         if element.isClickable() && element.isVisible() && element.isEnabled() {
@@ -70,16 +73,30 @@ final class UIElementScanner {
                     title: title,
                     label: ""  // Will be assigned later
                 )
-                elements.append(uiElement)
+                currentLevelElements.append(uiElement)
             }
         }
         
         // Recursively scan children
-        if let children = element.getChildren() {
+        guard let children = element.getChildren() else { return currentLevelElements }
+        
+        // Parallel scan for children
+        let childGivenElements = await withTaskGroup(of: [UIElementModel].self) { group in
             for child in children {
-                scanElement(child, into: &elements, maxElements: maxElements, depth: depth + 1)
+                group.addTask {
+                    return await self.scanElementAsync(child, depth: depth + 1)
+                }
             }
+            
+            var allChildren: [UIElementModel] = []
+            for await res in group {
+                allChildren.append(contentsOf: res)
+            }
+            return allChildren
         }
+        
+        currentLevelElements.append(contentsOf: childGivenElements)
+        return currentLevelElements
     }
     
     /// Assign keyboard labels to elements
@@ -117,7 +134,10 @@ final class UIElementScanner {
     /// Scan the frontmost application's window for all elements with text
     /// - Parameter maxElements: Maximum number of elements to return
     /// - Returns: Array of UIElementModel representing elements with text content
-    func scanTextElements(maxElements: Int = 500) -> [UIElementModel] {
+    /// Scan the frontmost application's window for all elements with text
+    /// - Parameter maxElements: Maximum number of elements to return
+    /// - Returns: Array of UIElementModel representing elements with text content
+    func scanTextElements(maxElements: Int = 500) async -> [UIElementModel] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
             print("UIElementScanner: No frontmost application")
             return []
@@ -137,19 +157,23 @@ final class UIElementScanner {
         
         // Recursively find all elements with text using tree-based deduplication
         // (Children take precedence over parents)
-        var limit = maxElements
-        let elements = scanTextElement(windowElement as! AXUIElement, limit: &limit)
+        let elements = await scanTextElementAsync(windowElement as! AXUIElement, depth: 0)
         
-        print("UIElementScanner: Found \(elements.count) text elements")
-        return elements
+        // Limit results
+        let finalElements = elements.count > maxElements ? Array(elements.prefix(maxElements)) : elements
+        
+        print("UIElementScanner: Found \(finalElements.count) text elements")
+        return finalElements
     }
     
     /// Recursively scan for elements with text content (including non-clickable elements)
     /// Returns a list of candidate elements from this subtree.
     /// If children return candidates, the current element is excluded (tree-based deduplication).
-    private func scanTextElement(_ element: AXUIElement, limit: inout Int, depth: Int = 0) -> [UIElementModel] {
-        guard depth < 20 else { return [] }
-        guard limit > 0 else { return [] }
+    /// Recursively scan for elements with text content (including non-clickable elements)
+    /// Returns a list of candidate elements from this subtree.
+    /// If children return candidates, the current element is excluded (tree-based deduplication).
+    private func scanTextElementAsync(_ element: AXUIElement, depth: Int = 0) async -> [UIElementModel] {
+        guard depth < 30 else { return [] }
         
         // Check if element is visible
         // We still traverse disabled elements because they might contain enabled children (e.g. AXList)
@@ -159,10 +183,18 @@ final class UIElementScanner {
         
         // Recursively scan children first
         if let children = element.getChildren() {
-            for child in children {
-                if limit <= 0 { break }
-                let results = scanTextElement(child, limit: &limit, depth: depth + 1)
-                childResults.append(contentsOf: results)
+             childResults = await withTaskGroup(of: [UIElementModel].self) { group in
+                for child in children {
+                    group.addTask {
+                        return await self.scanTextElementAsync(child, depth: depth + 1)
+                    }
+                }
+                
+                var results: [UIElementModel] = []
+                for await res in group {
+                    results.append(contentsOf: res)
+                }
+                return results
             }
         }
         
@@ -192,7 +224,6 @@ final class UIElementScanner {
                             title: text,
                             label: ""  // Not used for text search
                         )
-                        limit -= 1
                         childResults.append(uiElement)
                     }
                 }
@@ -430,7 +461,7 @@ final class UIElementScanner {
     }
     
     /// Scan the frontmost application's window for scrollable elements
-    func scanScrollableElements(maxElements: Int = 26) -> [UIElementModel] {
+    func scanScrollableElements(maxElements: Int = 26) async -> [UIElementModel] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return [] }
         
         let pid = frontmostApp.processIdentifier
@@ -443,17 +474,21 @@ final class UIElementScanner {
         
         let axWindow = windowElement as! AXUIElement
         
-        var elements: [UIElementModel] = []
-        scanScrollableElement(axWindow, into: &elements, maxElements: maxElements)
+        var elements = await scanScrollableElementAsync(axWindow, depth: 0)
+        
+        if elements.count > maxElements {
+            elements = Array(elements.prefix(maxElements))
+        }
         
         assignLabels(to: &elements)
         return elements
     }
     
     /// Recursively scan for scrollable elements
-    private func scanScrollableElement(_ element: AXUIElement, into elements: inout [UIElementModel], maxElements: Int, depth: Int = 0) {
-        guard depth < 20 else { return }
-        guard elements.count < maxElements else { return }
+    private func scanScrollableElementAsync(_ element: AXUIElement, depth: Int = 0) async -> [UIElementModel] {
+        guard depth < 30 else { return [] }
+        
+        var currentElements: [UIElementModel] = []
         
         if element.isScrollable() && element.isVisible() && element.isEnabled() {
             if let frame = element.getFrame(), let role = element.getRole() {
@@ -467,16 +502,27 @@ final class UIElementScanner {
                        title: element.getTitle(),
                        label: ""
                    )
-                   elements.append(uiElement)
+                   currentElements.append(uiElement)
                 }
             }
         }
         
         if let children = element.getChildren() {
-            for child in children {
-                scanScrollableElement(child, into: &elements, maxElements: maxElements, depth: depth + 1)
-            }
+             let childResults = await withTaskGroup(of: [UIElementModel].self) { group in
+                 for child in children {
+                     group.addTask {
+                         return await self.scanScrollableElementAsync(child, depth: depth + 1)
+                     }
+                 }
+                 var all: [UIElementModel] = []
+                 for await res in group {
+                     all.append(contentsOf: res)
+                 }
+                 return all
+             }
+             currentElements.append(contentsOf: childResults)
         }
+        return currentElements
     }
 
     /// Find an element by its label
