@@ -121,8 +121,8 @@ final class ViewModel: ObservableObject {
     }
     
     func monitorHotKey() {
-        // Window Switcher Mode: Control + Escape
-        hotKeyManager = GlobalHotKeyManager.controlEscape { [weak self] in
+        // Window Switcher Mode: Command + Escape
+        hotKeyManager = GlobalHotKeyManager.commandEscape { [weak self] in
             Task { @MainActor in
                 if let prevActiveApp = NSWorkspace.shared.runningApplications.first(where: {
                     $0.isActive && $0.bundleIdentifier != Bundle.main.bundleIdentifier
@@ -157,7 +157,7 @@ final class ViewModel: ObservableObject {
         }
         
         if hotKeyManager == nil {
-            print("Warning: Failed to register global hotkey Control+Escape")
+            print("Warning: Failed to register global hotkey Command+Escape")
         }
         if uiElementHotKeyManager == nil {
              print("Warning: Failed to register global hotkey Option+Escape")

@@ -5,7 +5,7 @@ It's experiment app for trying Accessibility API.
 ## Usage
 
 ### Window Switcher
-1. Press Control + Escape to show Window Switcher
+1. Press Command + Escape to show Window Switcher
 2. Press an alphabet that you want to focus
 
 ### Text Search

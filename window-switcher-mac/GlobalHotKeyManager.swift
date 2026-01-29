@@ -266,12 +266,12 @@ private struct HotKeyContext {
 
 // MARK: - Convenience initializer
 extension GlobalHotKeyManager {
-  /// Creates a hotkey for Control + Escape
-  static func controlEscape(handler: @escaping Handler) -> GlobalHotKeyManager? {
+  /// Creates a hotkey for Command + Escape
+  static func commandEscape(handler: @escaping Handler) -> GlobalHotKeyManager? {
     // kVK_Escape = 0x35 (53)
     return GlobalHotKeyManager(
       keyCode: CGKeyCode(kVK_Escape),
-      modifiers: kControlKeyMask,
+      modifiers: kCommandKeyMask,
       handler: handler
     )
   }
