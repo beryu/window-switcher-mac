@@ -9,6 +9,7 @@ final class ViewModel: ObservableObject {
         var uuid: UUID
         var pid: Int32
         var element: AXUIElement
+        var frame: CGRect
         var overlayViewFrame: CGRect
         var name: String
         var matchableName: String
@@ -708,10 +709,12 @@ final class ViewModel: ObservableObject {
                         continue
                     }
                 }
+                let frame = CGRect(origin: position, size: size)
                 newAppWindows.append(.init(
                     uuid: UUID(),
                     pid: pid,
                     element: element,
+                    frame: frame,
                     overlayViewFrame: CGRect(
                         origin: CGPoint(x: position.x + size.width / 2, y: position.y + size.height / 2),
                         size: CGSize(width: 150, height: 150)
@@ -879,32 +882,9 @@ final class ViewModel: ObservableObject {
         }
         self.previouslyActiveApp = prevActiveApp
         
-        // Scan for scrollable elements
-        let scrollableElements = await uiElementScanner.scanScrollableElements()
-        
-        if scrollableElements.isEmpty {
-            // No specific scrollable elements found, fallback to window center
-            if let pid = previouslyActiveApp?.processIdentifier,
-               let frame = uiElementScanner.getFocusedWindowFrame(pid: pid) {
-                let center = CGPoint(x: frame.midX, y: frame.midY)
-                transitionToScrollMode(targetCenter: center)
-            } else {
-                // Total fallback (mouse position)
-                transitionToScrollMode(targetCenter: nil)
-            }
-        } else if scrollableElements.count == 1 {
-            // Only one scrollable element, select it automatically
-            let element = scrollableElements[0]
-            let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
-            transitionToScrollMode(targetCenter: center)
-        } else {
-            // Multiple elements, ask user to select
-            mode = .scrollTargetSelection
-            inputBuffer = ""
-            uiElements = scrollableElements
-            scrollTargetLocation = nil
-            show()
-        }
+        // Start scroll mode immediately.
+        // We don't lock a target location; performScroll will use the current mouse position.
+        transitionToScrollMode(targetCenter: nil)
     }
     
     private func transitionToScrollMode(targetCenter: CGPoint?) {
@@ -924,17 +904,9 @@ final class ViewModel: ObservableObject {
             return
         }
         
-        // IMPORTANT: Must set the location to valid point in the target window.
-        // We assume the target is the previously active app's focused window.
-        // If we can get its frame, we target the center.
-        // Otherwise fallback to mouse or (0,0) (which fails).
-        
-        if let target = scrollTargetLocation {
-            event.location = target
-        } else if let pid = previouslyActiveApp?.processIdentifier, // Fallback re-check
-                  let frame = uiElementScanner.getFocusedWindowFrame(pid: pid) {
-             event.location = CGPoint(x: frame.midX, y: frame.midY)
-        } else if let currentEvent = CGEvent(source: nil) {
+        // Always use current mouse position for the scroll event
+        // This ensures scrolling happens under the cursor even if the user moves the mouse
+        if let currentEvent = CGEvent(source: nil) {
             event.location = currentEvent.location
         }
         
@@ -1077,7 +1049,7 @@ final class ViewModel: ObservableObject {
         }
     }
     
-    private func performMouseClick(at point: CGPoint) async {
+    private func performMouseMove(to point: CGPoint) async {
         // Get current mouse position
         let currentPosition = CGEvent(source: nil)?.location ?? point
         
@@ -1098,6 +1070,15 @@ final class ViewModel: ObservableObject {
             }
             try? await Task.sleep(nanoseconds: stepDuration)
         }
+        
+        // Final position assurance
+        if let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left) {
+             move.post(tap: .cghidEventTap)
+        }
+    }
+
+    private func performMouseClick(at point: CGPoint) async {
+        await performMouseMove(to: point)
         
         // Prepare click events
         guard let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
@@ -1127,6 +1108,13 @@ final class ViewModel: ObservableObject {
             print("focusApp: NSRunningApplication(processIdentifier:) failed for pid \(pid)")
             return
         }
+        
+        // Move mouse cursor to the center of the window
+        Task {
+            let center = CGPoint(x: appWindow.frame.midX, y: appWindow.frame.midY)
+            await performMouseMove(to: center)
+        }
+        
         if !app.activate() {
             print("focusApp: app.activate() failed for \(app.localizedName ?? "unknown app")")
             // Still try to set the main attribute even if activate failed
