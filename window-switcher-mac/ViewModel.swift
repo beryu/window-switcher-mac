@@ -621,13 +621,16 @@ final class ViewModel: ObservableObject {
         Task {
             try? await Task.sleep(nanoseconds: 300 * 1_000_000) // 300ms
             
-            // Try Accessibility API first
+            // Force Mouse click (User request: improved reliability)
+            // We skip AX performClick because it is often unreliable in browsers/Electron apps
+            /*
             if element.element.performClick() {
                 print("AXPerformAction dispatched")
                 return
             }
+            */
             
-            // Fallback: Mouse click
+            // Mouse simulation
             await performMouseClick(at: CGPoint(x: element.frame.minX + 5, y: element.frame.midY))
         }
     }
