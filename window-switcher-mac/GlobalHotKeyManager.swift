@@ -4,7 +4,7 @@ import Carbon.HIToolbox
 /// A native global hotkey manager using CGEvent tap
 final class GlobalHotKeyManager {
   typealias Handler = () -> Void
-  typealias KeyHandler = (String) -> Void
+  typealias KeyHandler = (String, Bool) -> Void // (Char, isKeyDown)
   
   private var eventTap: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
@@ -44,7 +44,7 @@ final class GlobalHotKeyManager {
       tap: .cgSessionEventTap,
       place: .headInsertEventTap,
       options: .defaultTap,
-      eventsOfInterest: CGEventMask(1 << CGEventType.keyDown.rawValue),
+      eventsOfInterest: CGEventMask((1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)),
       callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
         guard let refcon = refcon else {
           return Unmanaged.passRetained(event)
@@ -57,6 +57,7 @@ final class GlobalHotKeyManager {
         
         // Get key code and modifiers
         let eventKeyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        let isKeyDown = type == .keyDown
         let modifierFlags = event.flags.rawValue
         
         // Check modifiers
@@ -73,7 +74,8 @@ final class GlobalHotKeyManager {
         if hasControl { currentModifiers |= GlobalHotKeyManager.kControlKeyMask }
         
         // Handle trigger hotkey (always active)
-        if eventKeyCode == manager.keyCode {
+        // Global hotkeys only trigger on keyDown
+        if isKeyDown && eventKeyCode == manager.keyCode {
           // Check if modifiers match exactly
           if currentModifiers == manager.modifiers {
             print("GlobalHotKeyManager: Hotkey detected! Calling handler.")
@@ -88,7 +90,7 @@ final class GlobalHotKeyManager {
         // Handle overlay mode key capture
         if manager.isOverlayActive {
           // Handle Escape key to close overlay (allow with no modifiers)
-          if eventKeyCode == CGKeyCode(kVK_Escape) && !hasCommand && !hasShift && !hasOption && !hasControl {
+          if isKeyDown && eventKeyCode == CGKeyCode(kVK_Escape) && !hasCommand && !hasShift && !hasOption && !hasControl {
             print("GlobalHotKeyManager: Escape detected during overlay, closing.")
             DispatchQueue.main.async {
               manager.overlayEscapeHandler?()
@@ -103,24 +105,25 @@ final class GlobalHotKeyManager {
           }
           
           // Handle Backspace key
-          if eventKeyCode == CGKeyCode(kVK_Delete) && !hasCommand && !hasOption && !hasControl {
+          if isKeyDown && eventKeyCode == CGKeyCode(kVK_Delete) && !hasCommand && !hasOption && !hasControl {
             print("GlobalHotKeyManager: Backspace detected during overlay.")
             DispatchQueue.main.async {
-              manager.overlayKeyHandler?("\u{08}")  // Backspace character
+              manager.overlayKeyHandler?("\u{08}", true)  // Backspace character
             }
             return nil
           }
           
           // Handle Return key
-          if (eventKeyCode == CGKeyCode(kVK_Return) || eventKeyCode == CGKeyCode(kVK_ANSI_KeypadEnter)) && !hasCommand && !hasOption && !hasControl {
+          if isKeyDown && (eventKeyCode == CGKeyCode(kVK_Return) || eventKeyCode == CGKeyCode(kVK_ANSI_KeypadEnter)) && !hasCommand && !hasOption && !hasControl {
             print("GlobalHotKeyManager: Return detected during overlay.")
             DispatchQueue.main.async {
-              manager.overlayKeyHandler?("\n")
+              manager.overlayKeyHandler?("\n", true)
             }
             return nil
           }
           
           // Get Unicode characters from the event (supports IME input including Japanese)
+          // We capture both keyDown and keyUp for scrolling smoothness
           if !hasCommand && !hasControl {
             var actualStringLength: Int = 0
             var unicodeString = [UniChar](repeating: 0, count: 4)
@@ -131,9 +134,12 @@ final class GlobalHotKeyManager {
               let character = String(utf16CodeUnits: Array(chars), count: actualStringLength)
               
               if !character.isEmpty {
-                print("GlobalHotKeyManager: Unicode character '\(character)' captured during overlay.")
+                 // For logging, maybe reduce spam on keyUp
+                 if isKeyDown {
+                     print("GlobalHotKeyManager: Unicode character '\(character)' captured during overlay.")
+                 }
                 DispatchQueue.main.async {
-                  manager.overlayKeyHandler?(character)
+                  manager.overlayKeyHandler?(character, isKeyDown)
                 }
                 return nil
               }

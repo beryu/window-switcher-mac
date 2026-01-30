@@ -114,6 +114,11 @@ final class ViewModel: ObservableObject {
     /// Text search window controller (Spotlight-style)
     private let textSearchWindowController = TextSearchWindowController()
     
+    // Smooth scrolling state
+    private var scrollKeysPressed: Set<String> = []
+    private var scrollTimer: Timer?
+    private var scrollTicks: Int = 0
+    
 
     
     init(overlayController: OverlayPanelController) {
@@ -189,7 +194,21 @@ final class ViewModel: ObservableObject {
     }
     
     /// Handle key press from global key capture
-    func handleGlobalKeyPress(_ key: String) {
+    func handleGlobalKeyPress(_ key: String, isKeyDown: Bool) {
+        if mode == .scroll {
+             // Handle scroll mode separately for smooth scrolling
+             if isKeyDown {
+                 scrollKeysPressed.insert(key)
+             } else {
+                 scrollKeysPressed.remove(key)
+             }
+             updateScrollTimer()
+             return
+        }
+        
+        // Other modes only react to keyDown
+        guard isKeyDown else { return }
+        
         switch mode {
         case .windowSwitcher:
             // Check for direct key match first (Handles selected keys like A, B, C or 1, 2, 3)
@@ -332,20 +351,8 @@ final class ViewModel: ObservableObject {
                      }
                  }
              
-        case .scroll:
-            let scrollAmount: Int32 = 50
-            switch key {
-            case "h": // Left
-                performScroll(deltaX: scrollAmount, deltaY: 0)
-            case "j": // Down
-                performScroll(deltaX: 0, deltaY: -scrollAmount)
-            case "k": // Up
-                performScroll(deltaX: 0, deltaY: scrollAmount)
-            case "l": // Right
-                performScroll(deltaX: -scrollAmount, deltaY: 0)
-            default:
-                break
-            }
+         case .scroll:
+             break // Handled above exclusively
             
         case .textSearch:
             // Handle backspace (delete key)
@@ -395,9 +402,9 @@ final class ViewModel: ObservableObject {
         // Enable global key capture during overlay display if requested
         if enableKeyCapture {
             hotKeyManager?.enableOverlayMode(
-                keyHandler: { [weak self] key in
+                keyHandler: { [weak self] key, isKeyDown in
                     Task { @MainActor in
-                        self?.handleGlobalKeyPress(key)
+                        self?.handleGlobalKeyPress(key, isKeyDown: isKeyDown)
                     }
                 },
                 escapeHandler: { [weak self] in
@@ -431,6 +438,11 @@ final class ViewModel: ObservableObject {
             inputBuffer = ""
             textSearchQuery = ""
             focused = false
+            
+            // Clean up scroll timer
+            scrollTimer?.invalidate()
+            scrollTimer = nil
+            scrollKeysPressed.removeAll()
         }
         overlayController.hideOverlay()
         
@@ -1018,13 +1030,70 @@ final class ViewModel: ObservableObject {
         
         // Always use current mouse position for the scroll event
         // This ensures scrolling happens under the cursor even if the user moves the mouse
-        if let currentEvent = CGEvent(source: nil) {
-            event.location = currentEvent.location
+        var location = CGEvent(source: nil)?.location
+        
+        // Fallback if CGEvent location is (0,0) which can happen in some contexts
+        if location == nil || (location?.x == 0 && location?.y == 0) {
+             let nsLocation = NSEvent.mouseLocation
+             // NSEvent.mouseLocation is in screen coordinates (bottom-left origin), we need top-left
+             if let screenHeight = NSScreen.main?.frame.height {
+                 location = CGPoint(x: nsLocation.x, y: screenHeight - nsLocation.y)
+             } else {
+                 location = CGPoint(x: nsLocation.x, y: nsLocation.y) // Best guess fallback
+             }
         }
         
-        // We rely on ignoresMouseEvents = true on the overlay panel so the event passes through
-        event.post(tap: .cghidEventTap)
+        if let loc = location {
+             event.location = loc
+        }
+        
+        // Use .cgSessionEventTap which is often more reliable for application control than .cghidEventTap
+        // especially in corporate environments with security software
+        event.post(tap: .cgSessionEventTap)
         print("Performed scroll: X=\(deltaX), Y=\(deltaY) at \(event.location)")
+    }
+    
+    private func updateScrollTimer() {
+        if scrollKeysPressed.isEmpty {
+            scrollTimer?.invalidate()
+            scrollTimer = nil
+            scrollTicks = 0
+            return
+        }
+        
+        if scrollTimer == nil {
+            scrollTicks = 0
+            // 60 FPS = 0.016s
+            scrollTimer = Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    self?.processScrollTick()
+                }
+            }
+        }
+    }
+    
+    private func processScrollTick() {
+        scrollTicks += 1
+        
+        // Acceleration parameters
+        let minSpeed: Int32 = 27  // Start at ~half of max
+        let maxSpeed: Int32 = 55  // Max speed (2x original)
+        let rampTicks: Int = 20   // ~0.33 seconds at 60fps
+        
+        let progress = Double(min(scrollTicks, rampTicks)) / Double(rampTicks)
+        let currentSpeed = Int32(Double(minSpeed) + (Double(maxSpeed - minSpeed) * progress))
+        
+        var deltaX: Int32 = 0
+        var deltaY: Int32 = 0
+        
+        if scrollKeysPressed.contains("h") { deltaX += currentSpeed } // Left
+        if scrollKeysPressed.contains("l") { deltaX -= currentSpeed } // Right
+        if scrollKeysPressed.contains("j") { deltaY -= currentSpeed } // Down
+        if scrollKeysPressed.contains("k") { deltaY += currentSpeed } // Up
+        
+        if deltaX != 0 || deltaY != 0 {
+            performScroll(deltaX: deltaX, deltaY: deltaY)
+        }
     }
     
     // MARK: - UI Element Actions
