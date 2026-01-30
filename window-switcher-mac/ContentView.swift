@@ -26,6 +26,8 @@ struct OverlayContentView: View {
                         Text(appWindow.key)
                             .font(.system(size: 36, weight: .bold))
                             .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.2)
                         HStack {
                             if let image = appWindow.image {
                                 Image(nsImage: image)

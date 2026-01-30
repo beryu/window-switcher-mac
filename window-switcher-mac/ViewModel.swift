@@ -212,7 +212,26 @@ final class ViewModel: ObservableObject {
                 return
             }
             
-            inputBuffer = nextBuffer
+            // Assign filtered matches
+            // Check for auto-complete opportunity
+            var newBuffer = nextBuffer
+            if !matches.isEmpty {
+                // Find common prefix among all matches
+                let names = matches.map { $0.matchableName }
+                if let common = names.first {
+                    var prefix = common
+                    for name in names.dropFirst() {
+                        prefix = prefix.commonPrefix(with: name)
+                    }
+                    
+                    // If common prefix is longer than current buffer, auto-complete
+                    if prefix.count > newBuffer.count {
+                        newBuffer = prefix
+                    }
+                }
+            }
+            
+            inputBuffer = newBuffer
             assignHotKeys()
             
             // Auto-activate if only one match
@@ -727,6 +746,42 @@ final class ViewModel: ObservableObject {
             }
         }
         
+        // Deduplicate window names by appending suffixes (A, B, C...)
+        // This ensures identical names (e.g. "Dia", "Dia") become "DiaA", "DiaB"
+        // so they can be distinguished by typing.
+        var nameCounts: [String: Int] = [:]
+        for window in newAppWindows {
+            nameCounts[window.matchableName, default: 0] += 1
+        }
+        
+        // Only process names that appear more than once
+        var nameIndices: [String: Int] = [:]
+        for i in 0..<newAppWindows.count {
+            let name = newAppWindows[i].matchableName
+            if let count = nameCounts[name], count > 1 {
+                let index = nameIndices[name, default: 0]
+                
+                // Append suffix Start with 'A'
+                // But we must append to matchableName so it acts as part of the filterable string.
+                let suffix = String(UnicodeScalar(65 + (index % 26))!) // A, B, C...
+                // If overflow Z, maybe AA? Simplified for now.
+                
+                newAppWindows[i].matchableName = name + suffix.lowercased()
+                // Update display name too? Maybe just implicitly.
+                // Or maybe the user wants to see "Dia A"?
+                // The task is about hints. "DAA", "DAB".
+                // If matchableName is "diaa", then input "dia" matches both.
+                // Input "d" -> "i" common -> "a" common?
+                // "diaa" vs "diab". Common "dia".
+                // Input "d" -> auto-complete "dia".
+                // Hint logic: "dia" prefix common. Next "a" vs "b".
+                // Hint "ds" (discord), "daa" (dia-a), "dab" (dia-b).
+                // Yes, appending to matchableName achieves this.
+                
+                nameIndices[name] = index + 1
+            }
+        }
+
         self.allAppWindows = newAppWindows
         self.inputBuffer = ""
         assignHotKeys()
@@ -758,13 +813,70 @@ final class ViewModel: ObservableObject {
                 exactMatchIndices.append(i)
             } else {
                 // Prefix match case
-                if inputBuffer.count < name.count {
-                    let index = name.index(name.startIndex, offsetBy: inputBuffer.count)
-                    let key = String(name[index]).uppercased()
-                    resultWindows[i].key = key
-                    reservedKeys.insert(key)
-                } else {
-                    resultWindows[i].key = "?"
+                // "Smart Hint" Logic:
+                // Calculate the sequence of keys the user ACTUALLY acts on to select this window.
+                // This accounts for auto-completion that happens in handleGlobalKeyPress.
+                
+                var simulatedBuffer = inputBuffer
+                var predictedKey = ""
+                
+                // Simulation Loop
+                // We simulate typing characters until this window is uniquely identified
+                var currentCandidates = resultWindows
+                
+                // Limit iterations to prevent infinite loops in case of logic error, max name length
+                let maxIterations = name.count - inputBuffer.count + 1
+                for _ in 0..<maxIterations {
+                    // 1. Identify valid next matches based on current simulated buffer
+                    let matches = currentCandidates.filter { $0.matchableName.starts(with: simulatedBuffer) }
+                    
+                    // If unique or empty, stop (Minimal Hint)
+                    // We revert to stopping as soon as uniqueness is achieved.
+                    if matches.count <= 1 {
+                        break
+                    }
+                    
+                    // 2. Determine the Next Character user would type for THIS window
+                    // It must be the character in 'name' at index == simulatedBuffer.count
+                    if simulatedBuffer.count >= name.count {
+                        break // Should be unique by now if logic holds, or identical names
+                    }
+                    
+                    let nextIndex = name.index(name.startIndex, offsetBy: simulatedBuffer.count)
+                    let nextChar = String(name[nextIndex])
+                    
+                    // Append to our predicted key
+                    predictedKey += nextChar.uppercased()
+                    
+                    // 3. Update Simulated Buffer (User typed it)
+                    simulatedBuffer += nextChar.lowercased()
+                    
+                    // 4. Simulate Auto-Complete
+                    // Re-filter matches with new buffer
+                    let nextMatches = matches.filter { $0.matchableName.starts(with: simulatedBuffer) }
+                    
+                    if !nextMatches.isEmpty {
+                        let names = nextMatches.map { $0.matchableName }
+                        if let first = names.first {
+                            var common = first
+                            for n in names.dropFirst() {
+                                common = common.commonPrefix(with: n)
+                            }
+                            if common.count > simulatedBuffer.count {
+                                simulatedBuffer = common
+                            }
+                        }
+                    }
+                    
+                    // Update candidates for next iteration
+                    currentCandidates = nextMatches
+                }
+                
+                resultWindows[i].key = predictedKey
+                
+                // Reserve first char of the predicted key
+                if let firstChar = predictedKey.first {
+                    reservedKeys.insert(String(firstChar))
                 }
             }
         }
