@@ -5,6 +5,10 @@ Navigate windows, click button, and scroll content — all without leaving your 
 
 ![desktop](assets/desktop.png)
 
+## Installation
+
+Download the latest `.dmg` file from [Releases](https://github.com/beryu/window-switcher-mac/releases) and install it.
+
 ## Usage
 
 ### Window Switcher
