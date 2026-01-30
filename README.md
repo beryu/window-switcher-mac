@@ -1,6 +1,9 @@
 # Window Switcher
+<img src="assets/icon.png" width="128" alt="Window Switcher Icon">
+
+Navigate windows, click button, and scroll content — all without leaving your keyboard.
+
 ![desktop](assets/desktop.png)
-It's experiment app for trying Accessibility API.
 
 ## Usage
 
