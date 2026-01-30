@@ -159,32 +159,49 @@ struct OverlayContentView: View {
             } else if viewModel.mode == .scroll {
                 // Scroll Mode Indicator
                 // Scroll Mode Indicator
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 8) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "scroll")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(.white)
-                                Text("Scroll Mode")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                            
-                            HStack(spacing: 12) {
-                                Text("H: ←  J: ↓  K: ↑  L: →")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(.gray)
-                            }
+                // Position at the bottom-right of the target window
+                
+                // Determine the frame to position relative to
+                // If windowFrame is valid, use it. Otherwise use screenFrame (fallback)
+                let refFrame = (viewModel.windowFrame != .zero && viewModel.windowFrame.intersects(screenFrame)) 
+                    ? viewModel.windowFrame.intersection(screenFrame) 
+                    : screenFrame
+                
+                // Convert to local coordinates within the overlay
+                let localFrame = CGRect(
+                    x: refFrame.minX - screenFrame.minX,
+                    y: refFrame.minY - screenFrame.minY,
+                    width: refFrame.width,
+                    height: refFrame.height
+                )
+                
+                ZStack(alignment: .bottomTrailing) {
+                    // Empty container to define the area
+                    Color.clear
+                    
+                    VStack(spacing: 8) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "scroll")
+                                .font(.system(size: 24))
+                                .foregroundStyle(.white)
+                            Text("Scroll Mode")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        .padding(16)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(12)
-                        .padding(20)
+                        
+                        HStack(spacing: 12) {
+                            Text("H: ←  J: ↓  K: ↑  L: →")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.gray)
+                        }
                     }
+                    .padding(16)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(12)
+                    .padding(20) // Margin from edges
                 }
+                .frame(width: localFrame.width, height: localFrame.height)
+                .position(x: localFrame.midX, y: localFrame.midY)
             } else if viewModel.mode == .textSearch {
                 // Text Search Mode
                 

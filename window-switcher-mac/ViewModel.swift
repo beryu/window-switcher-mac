@@ -1006,6 +1006,20 @@ final class ViewModel: ObservableObject {
         }
         self.previouslyActiveApp = prevActiveApp
         
+        // Get focused window frame for positioning the indicator
+        let pid = prevActiveApp.processIdentifier
+        if let windowInfo = uiElementScanner.getFocusedWindowInfo(pid: pid) {
+             let frame = windowInfo.frame
+             await MainActor.run {
+                 self.windowFrame = frame
+             }
+        } else {
+             // Fallback to zero (will default to screen bounds in view)
+             await MainActor.run {
+                 self.windowFrame = .zero
+             }
+        }
+        
         // Start scroll mode immediately.
         // We don't lock a target location; performScroll will use the current mouse position.
         transitionToScrollMode(targetCenter: nil)
