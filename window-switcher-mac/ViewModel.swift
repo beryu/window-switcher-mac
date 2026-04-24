@@ -118,6 +118,7 @@ final class ViewModel: ObservableObject {
     private var scrollKeysPressed: Set<String> = []
     private var scrollTimer: Timer?
     private var scrollTicks: Int = 0
+    private var scrollGestureActive: Bool = false
     
 
     
@@ -443,6 +444,7 @@ final class ViewModel: ObservableObject {
             scrollTimer?.invalidate()
             scrollTimer = nil
             scrollKeysPressed.removeAll()
+            endScrollGesture()
         }
         overlayController.hideOverlay()
         
@@ -1033,27 +1035,57 @@ final class ViewModel: ObservableObject {
         show() // Re-configure overlay for scroll mode (transparency)
     }
     
+    /// Event source with private state to avoid inheriting keyboard modifier flags.
+    /// Without this, the scroll events can carry stale modifier keys (e.g. Option)
+    /// which cause some apps to interpret scroll as zoom.
+    private let scrollEventSource = CGEventSource(stateID: .privateState)
+    
     private func performScroll(deltaX: Int32, deltaY: Int32) {
-        // Create scroll wheel event
-        // Note: wheelCount=2 means we are providing Y (wheel1) and X (wheel2) deltas
-        // Units: .pixel gives smoother control, .line gives larger steps
-        guard let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: deltaY, wheel2: deltaX, wheel3: 0) else {
+        // Create a scroll event that mimics a real trackpad two-finger scroll.
+        // We create with .line units and wheel deltas of 0 so that the line-based
+        // delta fields (deltaAxis1/2) remain zero. Then we manually set the pixel-based
+        // fields (pointDeltaAxis1/2 and fixedPtDeltaAxis1/2). This is critical because
+        // apps like Miro and KiCad check the line-based deltas to decide whether to
+        // zoom (mouse wheel) or scroll (trackpad). A real trackpad event has zero line
+        // deltas and non-zero pixel deltas.
+        guard let event = CGEvent(scrollWheelEvent2Source: scrollEventSource, units: .line, wheelCount: 2, wheel1: 0, wheel2: 0, wheel3: 0) else {
             print("Failed to create scroll event")
             return
         }
         
+        // Mark as continuous (trackpad-style) scroll event.
+        event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        
+        // Set pixel-based deltas via pointDelta only.
+        // Real trackpad events leave fixedPtDelta at 0 — setting it non-zero can cause
+        // some apps (Miro, KiCad) to misinterpret the event as a zoom gesture.
+        event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: Int64(deltaY))
+        event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: Int64(deltaX))
+        
+        // Field 137 is an undocumented field that real trackpad events always set to 1.
+        if let field137 = CGEventField(rawValue: 137) {
+            event.setIntegerValueField(field137, value: 1)
+        }
+        
+        // Set scroll phase to mimic real trackpad gesture lifecycle.
+        // Phase 1 = began, 2 = changed.
+        let phase: Int64 = scrollGestureActive ? 2 : 1
+        event.setIntegerValueField(.scrollWheelEventScrollPhase, value: phase)
+        scrollGestureActive = true
+        
+        // Ensure no modifier flags are set (prevents apps from treating scroll as zoom)
+        event.flags = []
+        
         // Always use current mouse position for the scroll event
-        // This ensures scrolling happens under the cursor even if the user moves the mouse
         var location = CGEvent(source: nil)?.location
         
         // Fallback if CGEvent location is (0,0) which can happen in some contexts
         if location == nil || (location?.x == 0 && location?.y == 0) {
              let nsLocation = NSEvent.mouseLocation
-             // NSEvent.mouseLocation is in screen coordinates (bottom-left origin), we need top-left
              if let screenHeight = NSScreen.main?.frame.height {
                  location = CGPoint(x: nsLocation.x, y: screenHeight - nsLocation.y)
              } else {
-                 location = CGPoint(x: nsLocation.x, y: nsLocation.y) // Best guess fallback
+                 location = CGPoint(x: nsLocation.x, y: nsLocation.y)
              }
         }
         
@@ -1061,10 +1093,36 @@ final class ViewModel: ObservableObject {
              event.location = loc
         }
         
-        // Use .cgSessionEventTap which is often more reliable for application control than .cghidEventTap
-        // especially in corporate environments with security software
         event.post(tap: .cgSessionEventTap)
-        print("Performed scroll: X=\(deltaX), Y=\(deltaY) at \(event.location)")
+    }
+    
+    /// Send a scroll-ended event so apps know the trackpad gesture is complete.
+    private func endScrollGesture() {
+        guard scrollGestureActive else { return }
+        scrollGestureActive = false
+        
+        guard let event = CGEvent(scrollWheelEvent2Source: scrollEventSource, units: .line, wheelCount: 2, wheel1: 0, wheel2: 0, wheel3: 0) else { return }
+        event.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        // Phase 4 = ended
+        event.setIntegerValueField(.scrollWheelEventScrollPhase, value: 4)
+        if let field137 = CGEventField(rawValue: 137) {
+            event.setIntegerValueField(field137, value: 1)
+        }
+        event.flags = []
+        
+        var location = CGEvent(source: nil)?.location
+        if location == nil || (location?.x == 0 && location?.y == 0) {
+            let nsLocation = NSEvent.mouseLocation
+            if let screenHeight = NSScreen.main?.frame.height {
+                location = CGPoint(x: nsLocation.x, y: screenHeight - nsLocation.y)
+            } else {
+                location = CGPoint(x: nsLocation.x, y: nsLocation.y)
+            }
+        }
+        if let loc = location {
+            event.location = loc
+        }
+        event.post(tap: .cgSessionEventTap)
     }
     
     private func updateScrollTimer() {
@@ -1072,6 +1130,7 @@ final class ViewModel: ObservableObject {
             scrollTimer?.invalidate()
             scrollTimer = nil
             scrollTicks = 0
+            endScrollGesture()
             return
         }
         
