@@ -26,3 +26,13 @@ Download the latest `.dmg` file from [Releases](https://github.com/beryu/window-
 ## Requirements
 
 - macOS 14.0+
+
+## Release DMG
+
+Export a Developer ID-signed `window-switcher-mac.app` from Xcode into `build/`. `make package` creates a DMG for local inspection. To sign and notarize a DMG for distribution, use a locally installed Developer ID Application identity and a saved `notarytool` keychain profile:
+
+```sh
+make release-dmg SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' NOTARY_PROFILE=your-profile
+```
+
+Distribute `window-switcher.dmg` only after this command succeeds.
